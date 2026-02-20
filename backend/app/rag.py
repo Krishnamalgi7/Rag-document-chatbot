@@ -11,13 +11,13 @@ from groq import Groq
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Constants
+# Constants  (DO NOT CHANGE — working configuration)
 # ---------------------------------------------------------------------------
 EMBEDDING_MODEL      = "all-MiniLM-L6-v2"   # dim = 384
 GROQ_MODEL           = "llama-3.1-8b-instant"
 SIMILARITY_THRESHOLD = 1.2                   # cosine DISTANCE 0-2: < 1.2 keeps related docs
 TOP_K                = 5                     # max chunks to retrieve
-CHUNK_SIZE           = 500                   # target tokens per chunk (~4 chars/token ≈ 2000 chars)
+CHUNK_SIZE           = 500                   # target tokens per chunk
 CHUNK_OVERLAP        = 50                    # overlap tokens between consecutive chunks
 
 # ---------------------------------------------------------------------------
@@ -27,20 +27,16 @@ embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 groq_client     = Groq(api_key=GROQ_API_KEY)
 
 # ---------------------------------------------------------------------------
-# Text chunking
+# Text chunking  (unchanged)
 # ---------------------------------------------------------------------------
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """
-    Split text into overlapping word-level chunks of ~chunk_size tokens.
-    Uses word count as a proxy for token count (1 token ≈ 0.75 words).
-    chunk_size=500 tokens → ~375 words per chunk.
-    """
+    """Split text into overlapping word-level chunks of ~chunk_size tokens."""
     words = text.split()
     if not words:
         return []
 
-    target_words = int(chunk_size * 0.75)   # approximate words per chunk
+    target_words = int(chunk_size * 0.75)
     overlap_words = int(overlap * 0.75)
 
     chunks = []
@@ -51,14 +47,14 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
         chunks.append(chunk)
         if end == len(words):
             break
-        start += target_words - overlap_words  # slide with overlap
+        start += target_words - overlap_words
 
     logger.info("Chunked text into %d chunk(s).", len(chunks))
     return chunks
 
 
 # ---------------------------------------------------------------------------
-# Embedding helpers
+# Embedding helpers  (unchanged)
 # ---------------------------------------------------------------------------
 
 def generate_embedding(text_content: str) -> list[float]:
@@ -68,55 +64,74 @@ def generate_embedding(text_content: str) -> list[float]:
 
 
 # ---------------------------------------------------------------------------
-# Document storage
+# Document storage  (CHANGED: now accepts user_id)
 # ---------------------------------------------------------------------------
 
-def store_document(content: str) -> None:
-    """Embed and persist a single document chunk to the vector store."""
-    logger.info("Storing document chunk (%d chars).", len(content))
+def store_document(content: str, user_id: str) -> None:
+    """Embed and persist a single document chunk with its owner user_id."""
+    logger.info("Storing chunk (%d chars) for user_id=%s", len(content), user_id)
     embedding = generate_embedding(content)
     try:
         with engine.connect() as conn:
             conn.execute(
                 text(
-                    "INSERT INTO documents (content, embedding) "
-                    "VALUES (:content, CAST(:embedding AS vector))"
+                    "INSERT INTO documents (content, embedding, user_id) "
+                    "VALUES (:content, CAST(:embedding AS vector), :user_id)"
                 ),
-                {"content": content, "embedding": str(embedding)},
+                {"content": content, "embedding": str(embedding), "user_id": user_id},
             )
             conn.commit()
-        logger.info("Document chunk stored successfully.")
+        logger.info("Chunk stored successfully.")
     except Exception as exc:
-        logger.error("Failed to store document chunk: %s", exc)
+        logger.error("Failed to store chunk: %s", exc)
         raise
 
 
-def store_chunks(chunks: list[str]) -> int:
-    """
-    Embed and persist multiple chunks from a single document.
-    Returns the number of chunks stored.
-    """
+def store_chunks(chunks: list[str], user_id: str) -> int:
+    """Embed and persist multiple chunks. Returns count stored."""
     stored = 0
     for i, chunk in enumerate(chunks):
         if not chunk.strip():
             continue
         logger.info("Storing chunk %d/%d…", i + 1, len(chunks))
-        store_document(chunk)
+        store_document(chunk, user_id)
         stored += 1
-    logger.info("Stored %d chunk(s) total.", stored)
+    logger.info("Stored %d chunk(s) for user_id=%s.", stored, user_id)
     return stored
 
 
 # ---------------------------------------------------------------------------
-# Vector search with similarity threshold
+# Document deletion  (NEW)
 # ---------------------------------------------------------------------------
 
-def search_similar(query: str) -> list[str]:
+def delete_user_documents(user_id: str) -> int:
+    """Delete ALL documents belonging to user_id. Returns number of rows deleted."""
+    logger.info("Deleting all documents for user_id=%s", user_id)
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("DELETE FROM documents WHERE user_id = :user_id"),
+                {"user_id": user_id},
+            )
+            conn.commit()
+            deleted = result.rowcount
+        logger.info("Deleted %d document(s) for user_id=%s.", deleted, user_id)
+        return deleted
+    except Exception as exc:
+        logger.error("Failed to delete documents for user_id=%s: %s", user_id, exc)
+        raise
+
+
+# ---------------------------------------------------------------------------
+# Vector search  (CHANGED: filters by user_id)
+# ---------------------------------------------------------------------------
+
+def search_similar(query: str, user_id: str) -> list[str]:
     """
-    Return up to TOP_K document chunks whose cosine distance to the query
-    embedding is below SIMILARITY_THRESHOLD.
+    Return up to TOP_K chunks owned by user_id whose cosine distance
+    to the query embedding is below SIMILARITY_THRESHOLD.
     """
-    logger.info("Searching documents for: %r", query[:80])
+    logger.info("Searching docs for user_id=%s | query=%r", user_id, query[:80])
     query_embedding = generate_embedding(query)
 
     try:
@@ -127,11 +142,12 @@ def search_similar(query: str) -> list[str]:
                     SELECT content,
                            embedding <=> CAST(:embedding AS vector) AS distance
                     FROM   documents
+                    WHERE  user_id = :user_id
                     ORDER  BY distance
                     LIMIT  :limit
                     """
                 ),
-                {"embedding": str(query_embedding), "limit": TOP_K},
+                {"embedding": str(query_embedding), "limit": TOP_K, "user_id": user_id},
             )
             rows = result.fetchall()
     except Exception as exc:
@@ -147,11 +163,11 @@ def search_similar(query: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Groq response generators
+# Groq response generators  (unchanged)
 # ---------------------------------------------------------------------------
 
 def _rag_response(context_docs: list[str], user_message: str) -> str:
-    """Generate an answer grounded in retrieved document chunks."""
+    """Generate an answer grounded in retrieved document chunks. Never says 'I cannot find...'"""
     context_text = "\n\n---\n\n".join(context_docs)
     logger.info("Calling Groq in RAG mode with %d chunk(s).", len(context_docs))
 
@@ -162,15 +178,20 @@ def _rag_response(context_docs: list[str], user_message: str) -> str:
                 "role": "system",
                 "content": (
                     "You are a helpful AI assistant.\n\n"
-                    "Use the provided document context to answer the user's question accurately.\n"
-                    "Prioritize the context. If the context does not contain the answer, "
-                    "use your general knowledge to provide a helpful response.\n\n"
+                    "The user has uploaded documents. Use the provided context below to answer "
+                    "their question as accurately as possible.\n"
+                    "Rules:\n"
+                    "1. Prioritize information from the context.\n"
+                    "2. If the context does not fully answer the question, supplement with "
+                    "your general knowledge — but still give a complete, useful answer.\n"
+                    "3. NEVER say 'I cannot find', 'not in the document', or similar. "
+                    "Always provide the best answer you can.\n\n"
                     f"Context:\n{context_text}"
                 ),
             },
             {"role": "user", "content": user_message},
         ],
-        temperature=0.2,
+        temperature=0.3,
     )
     return completion.choices[0].message.content
 
@@ -191,17 +212,34 @@ def _fallback_response(user_message: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Public entry point
+# Public entry point  (CHANGED: user_id-aware routing)
 # ---------------------------------------------------------------------------
 
-def process_chat(user_message: str) -> dict:
+def process_chat(user_message: str, user_id: str | None = None) -> dict:
     """
-    Dual-mode RAG chat handler.
+    Smart dual-mode RAG handler.
+
+    Decision tree:
+      1. user_id is None  → PUBLIC mode  → skip search → fallback (mode="fallback")
+      2. user_id is set   → AUTHENTICATED mode:
+           a. Search user's documents
+           b. Relevant chunks found → RAG       (mode="rag")
+           c. No relevant chunks   → fallback   (mode="fallback")
+
+    Both modes always return a useful answer — never a refusal.
     Returns: {"mode": "rag"|"fallback", "response": "..."}
     """
-    context_docs = search_similar(user_message)
+    # Public mode: not logged in → always fallback
+    if user_id is None:
+        logger.info("Mode: FALLBACK (public — no auth).")
+        return {"mode": "fallback", "response": _fallback_response(user_message)}
+
+    # Authenticated mode: search user's own documents
+    context_docs = search_similar(user_message, user_id)
 
     if context_docs:
+        logger.info("Mode: RAG (%d relevant chunk(s) found for user %s).", len(context_docs), user_id)
         return {"mode": "rag", "response": _rag_response(context_docs, user_message)}
 
+    logger.info("Mode: FALLBACK (no relevant chunks for user %s).", user_id)
     return {"mode": "fallback", "response": _fallback_response(user_message)}
