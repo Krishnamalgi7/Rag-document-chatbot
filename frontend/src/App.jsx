@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // ── Supabase client ──────────────────────────────────────────────────────────
 const supabase = createClient(
@@ -398,7 +400,11 @@ export default function App() {
                       {msg.mode === "rag" ? "📄 From Documents" : "🤖 AI Response"}
                     </span>
                   )}
-                  <div className="message-bubble">{msg.text}</div>
+                  <div className="message-bubble">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               ))}
               {loading && (

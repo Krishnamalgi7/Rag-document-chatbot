@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 EMBEDDING_MODEL      = "all-MiniLM-L6-v2"   # dim = 384
 GROQ_MODEL           = "llama-3.1-8b-instant"
-SIMILARITY_THRESHOLD = 1.2                   # cosine DISTANCE 0-2: < 1.2 keeps related docs
+SIMILARITY_THRESHOLD = 0.9                   # cosine DISTANCE 0-2: < 1.2 keeps related docs
 TOP_K                = 5                     # max chunks to retrieve
 CHUNK_SIZE           = 500                   # target tokens per chunk
 CHUNK_OVERLAP        = 50                    # overlap tokens between consecutive chunks
@@ -178,16 +178,21 @@ def _rag_response(context_docs: list[str], user_message: str) -> str:
                 "role": "system",
                 "content": (
                     "You are a helpful AI assistant.\n\n"
-                    "The user has uploaded documents. Use the provided context below to answer "
-                    "their question as accurately as possible.\n"
-                    "Rules:\n"
-                    "1. Prioritize information from the context.\n"
+                    "Respond in clean Markdown format.\n\n"
+                    "Formatting Rules:\n"
+                    "- Use headings (##) when appropriate.\n"
+                    "- Use bullet points for lists.\n"
+                    "- Use **bold** for key terms.\n"
+                    "- Use code blocks for technical content.\n"
+                    "- Add proper spacing between sections.\n\n"
+                    "Context Usage Rules:\n"
+                    "1. Prioritize information from the provided context.\n"
                     "2. If the context does not fully answer the question, supplement with "
-                    "your general knowledge — but still give a complete, useful answer.\n"
-                    "3. NEVER say 'I cannot find', 'not in the document', or similar. "
-                    "Always provide the best answer you can.\n\n"
+                    "general knowledge — but still provide a complete and useful answer.\n"
+                    "3. NEVER say 'I cannot find', 'not in the document', or similar phrases.\n"
+                    "4. Always provide the best possible answer.\n\n"
                     f"Context:\n{context_text}"
-                ),
+                ),  
             },
             {"role": "user", "content": user_message},
         ],
@@ -203,7 +208,20 @@ def _fallback_response(user_message: str) -> str:
     completion = groq_client.chat.completions.create(
         model=GROQ_MODEL,
         messages=[
-            {"role": "system", "content": "You are a helpful AI assistant."},
+            {
+                "role": "system",
+                "content": (
+                    "You are a helpful AI assistant.\n\n"
+                    "Respond in clean Markdown format.\n\n"
+                    "Formatting Rules:\n"
+                    "- Use headings (##) when appropriate.\n"
+                    "- Use bullet points for lists.\n"
+                    "- Use **bold** for key terms.\n"
+                    "- Use code blocks for technical explanations.\n"
+                    "- Add proper spacing between sections.\n\n"
+                    "Provide a structured, readable, and professional answer."
+                ),
+            },
             {"role": "user", "content": user_message},
         ],
         temperature=0.7,

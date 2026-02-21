@@ -516,3 +516,54 @@
   background: var(--bg-badge-fall);
   color: var(--warning);
 }
+
+/* ─────────────────────────────────────────
+   ChatGPT-style Markdown Formatting
+   ───────────────────────────────────────── */
+
+.message-bubble h1,
+.message-bubble h2,
+.message-bubble h3 {
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.message-bubble p {
+  margin: 6px 0;
+}
+
+.message-bubble ul,
+.message-bubble ol {
+  margin: 6px 0 6px 22px;
+}
+
+.message-bubble li {
+  margin-bottom: 4px;
+}
+
+.message-bubble strong {
+  font-weight: 600;
+}
+
+.message-bubble code {
+  background: rgba(0,0,0,0.06);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.message-bubble pre {
+  background: #1e1e1e;
+  color: #ffffff;
+  padding: 14px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.message-bubble pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
