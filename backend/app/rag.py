@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 EMBEDDING_MODEL      = "all-MiniLM-L6-v2"   # dim = 384
 GROQ_MODEL           = "llama-3.1-8b-instant"
-SIMILARITY_THRESHOLD = 0.9                   # cosine DISTANCE 0-2: < 1.2 keeps related docs
-TOP_K                = 5                     # max chunks to retrieve
+SIMILARITY_THRESHOLD = 1.0                   # cosine DISTANCE 0-2: < 1.2 keeps related docs
+TOP_K                = 3                     # max chunks to retrieve
 CHUNK_SIZE           = 500                   # target tokens per chunk
 CHUNK_OVERLAP        = 50                    # overlap tokens between consecutive chunks
 
@@ -177,7 +177,7 @@ def _rag_response(context_docs: list[str], user_message: str) -> str:
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful AI assistant.\n\n"
+                    "You are a retrieval-augmented AI assistant.\n\n"
                     "Respond in clean Markdown format.\n\n"
                     "Formatting Rules:\n"
                     "- Use headings (##) when appropriate.\n"
@@ -186,13 +186,13 @@ def _rag_response(context_docs: list[str], user_message: str) -> str:
                     "- Use code blocks for technical content.\n"
                     "- Add proper spacing between sections.\n\n"
                     "Context Usage Rules:\n"
-                    "1. Prioritize information from the provided context.\n"
-                    "2. If the context does not fully answer the question, supplement with "
-                    "general knowledge — but still provide a complete and useful answer.\n"
-                    "3. NEVER say 'I cannot find', 'not in the document', or similar phrases.\n"
-                    "4. Always provide the best possible answer.\n\n"
+                    "1. Use ONLY the information relevant to the user's question.\n"
+                    "2. Do NOT continue into the next section of the document.\n"
+                    "3. Do NOT summarize unrelated content even if it appears in the context.\n"
+                    "4. Extract only the portion that directly answers the question.\n"
+                    "5. If context is insufficient, clearly answer using general knowledge.\n\n"
                     f"Context:\n{context_text}"
-                ),  
+                ),
             },
             {"role": "user", "content": user_message},
         ],

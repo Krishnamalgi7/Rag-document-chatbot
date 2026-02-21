@@ -287,9 +287,10 @@ export default function App() {
               {authMode === "login" ? "No account? Sign up" : "Already have an account? Login"}
             </button>
 
+            
             <p className="sidebar-hint">
-              Login to upload PDFs to your private knowledge base.
-              Without login, the assistant uses general AI knowledge.
+              ⚠️ Current version only supports text-based PDFs. Files are private & deleted on logout.
+
             </p>
           </div>
         ) : (
@@ -297,7 +298,7 @@ export default function App() {
           <>
             <div className="user-info">
               <span className="user-email" title={user.email}>👤 {user.email}</span>
-              <button className="btn-logout" onClick={handleLogout} title="Logout & delete your documents">
+              <button className="btn-logout" onClick={handleLogout} title="Logout clears all your uploaded documents">
                 Logout
               </button>
             </div>
@@ -362,8 +363,7 @@ export default function App() {
             )}
 
             <p className="sidebar-hint">
-              PDFs are stored privately for your account.
-              They are deleted permanently when you logout.
+              PDFs stay private and are deleted when you log out.
             </p>
           </>
         )}
@@ -373,7 +373,7 @@ export default function App() {
       <main className="chat-main">
         <header className="chat-header">
           <div className="chat-header-dot" />
-          <h2>RAG Assistant</h2>
+          <h2>Your Private AI Assistant — Powered by RAG</h2>
           {!user && (
             <span className="public-badge">🔓 Public Mode</span>
           )}
@@ -386,8 +386,8 @@ export default function App() {
               <h3>Start a conversation</h3>
               <p>
                 {user
-                  ? "Upload a PDF on the left, then ask questions about its content."
-                  : "You're in public mode. Login to upload documents and enable RAG search."
+                  ? "Start chatting! Upload a PDF to explore its content."
+                  : "Public Mode Active — Chat freely, or log in to unlock RAG search with your documents"
                 }
               </p>
             </div>
@@ -446,7 +446,7 @@ export default function App() {
           </div>
           <p className="input-hint">
             {user
-              ? "Logged in · Documents isolated to your account · Deleted on logout"
+              ? "Logged in · Private documents · Auto-deleted on logout"
               : "Public mode · No documents · All responses use general AI knowledge"
             }
           </p>
