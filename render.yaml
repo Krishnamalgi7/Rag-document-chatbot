@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: mychatbot-api
+    runtime: python
+    rootDir: backend
+    plan: free # You can change this to 'starter' if you need more power
+    [cite_start]buildCommand: pip install -r requirements.txt [cite: 1]
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false # You will enter this manually in the Render UI for security
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0 # Or your preferred version
