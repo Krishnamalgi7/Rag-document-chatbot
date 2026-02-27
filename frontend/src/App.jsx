@@ -33,7 +33,7 @@ export default function App() {
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
 
-  // ── PDF upload state ────────────────────────────────────────────────────
+  // ── Document upload state ───────────────────────────────────────────────
   const [selectedFile, setSelectedFile]     = useState(null);
   const [uploading, setUploading]           = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState(null);
@@ -174,11 +174,13 @@ export default function App() {
     }
   };
 
-  // ── PDF upload ──────────────────────────────────────────────────────────
+  // ── Document upload ─────────────────────────────────────────────────────
   const handleFileSelect = (file) => {
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setUploadFeedback({ type: "error", text: "❌ Only PDF files are accepted." });
+    const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"];
+    const isAllowed = allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+    if (!isAllowed) {
+      setUploadFeedback({ type: "error", text: "❌ Only PDF and Image files are accepted." });
       setTimeout(() => setUploadFeedback(null), 4000);
       return;
     }
@@ -186,7 +188,7 @@ export default function App() {
     setUploadFeedback(null);
   };
 
-  const uploadPDF = async () => {
+  const uploadDocument = async () => {
     if (!selectedFile || uploading || !user) return;
 
     setUploading(true);
@@ -196,7 +198,7 @@ export default function App() {
     formData.append("file", selectedFile);
 
     try {
-      const res = await fetch(`${API_BASE}/upload-pdf`, {
+      const res = await fetch(`${API_BASE}/upload-document`, {
         method:  "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
         body:    formData,
@@ -208,7 +210,7 @@ export default function App() {
         throw new Error(data.detail || `Server error ${res.status}`);
       }
 
-      setUploadFeedback({ type: "success", text: data.message || "✅ PDF uploaded!" });
+      setUploadFeedback({ type: "success", text: data.message || "✅ Document uploaded!" });
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setTimeout(() => setUploadFeedback(null), 6000);
@@ -250,7 +252,7 @@ export default function App() {
           /* Not logged in — show login/signup form */
           <div className="auth-panel">
             <p className="sidebar-title">
-              {authMode === "login" ? "Login to upload PDFs" : "Create an account"}
+              {authMode === "login" ? "Login to upload Documents" : "Create an account"}
             </p>
 
             <input
@@ -289,12 +291,11 @@ export default function App() {
 
             
             <p className="sidebar-hint">
-              ⚠️ Current version only supports text-based PDFs. Files are private & deleted on logout.
-
+              ⚠️ Current version supports PDFs (text & scanned) and Images via FREE OCR. Files are private & deleted on logout.
             </p>
           </div>
         ) : (
-          /* Logged in — show user info + PDF upload */
+          /* Logged in — show user info + Document upload */
           <>
             <div className="user-info">
               <span className="user-email" title={user.email}>👤 {user.email}</span>
@@ -316,7 +317,7 @@ export default function App() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf"
+                accept=".pdf,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
                 style={{ display: "none" }}
                 onChange={(e) => handleFileSelect(e.target.files[0])}
               />
@@ -342,18 +343,18 @@ export default function App() {
               ) : (
                 <div className="drop-zone-placeholder">
                   <span className="drop-icon">📂</span>
-                  <span className="drop-text">{isDragging ? "Drop PDF here" : "Click or drag PDF here"}</span>
-                  <span className="drop-hint">PDF files only</span>
+                  <span className="drop-text">{isDragging ? "Drop Document here" : "Click or drag Document here"}</span>
+                  <span className="drop-hint">PDF or Image files</span>
                 </div>
               )}
             </div>
 
             <button
               className="btn-upload"
-              onClick={uploadPDF}
+              onClick={uploadDocument}
               disabled={!selectedFile || uploading}
             >
-              {uploading ? <span className="upload-spinner">Uploading…</span> : "⬆ Upload PDF"}
+              {uploading ? <span className="upload-spinner">Uploading…</span> : "⬆ Upload Document"}
             </button>
 
             {uploadFeedback && (
@@ -363,7 +364,7 @@ export default function App() {
             )}
 
             <p className="sidebar-hint">
-              PDFs stay private and are deleted when you log out.
+              Documents stay private and are deleted when you log out.
             </p>
           </>
         )}
@@ -386,7 +387,7 @@ export default function App() {
               <h3>Start a conversation</h3>
               <p>
                 {user
-                  ? "Start chatting! Upload a PDF to explore its content."
+                  ? "Start chatting! Upload a document to explore its content."
                   : "Public Mode Active — Chat freely, or log in to unlock RAG search with your documents"
                 }
               </p>
@@ -429,7 +430,7 @@ export default function App() {
               rows={1}
               placeholder={
                 user
-                  ? "Ask a question about your PDF… (Shift+Enter for newline)"
+                  ? "Ask a question about your documents… (Shift+Enter for newline)"
                   : "Ask anything… (Login to enable document search)"
               }
               value={input}

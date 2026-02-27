@@ -1,7 +1,6 @@
 import io
 import logging
 import logging.config
-import pdfplumber
 import httpx
 from fastapi import FastAPI, HTTPException, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +9,7 @@ from typing import Optional
 
 from app.config import SUPABASE_URL, SUPABASE_ANON_KEY
 from app.rag import process_chat, chunk_text, store_chunks, delete_user_documents
+from app.document_processor import DocumentProcessor
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -23,18 +23,30 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-app = FastAPI(title="MyChatbot API", version="2.0.0")
+app = FastAPI(title="MyChatbot API - Multi-Modal FREE", version="3.0.0-FREE")
 
 # ---------------------------------------------------------------------------
-# CORS
+# CORS - Updated for development
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "*"  # Allow all in development
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# Initialize Document Processor (FREE version - no API costs!)
+# ---------------------------------------------------------------------------
+doc_processor = DocumentProcessor()
 
 # ---------------------------------------------------------------------------
 # Request schemas
@@ -51,7 +63,6 @@ async def get_current_user(authorization: str) -> str:
     """
     Verify a Supabase access token by calling Supabase /auth/v1/user.
     Returns the user UUID on success. Raises HTTP 401 on failure.
-    This approach requires no extra JWT library — Supabase validates the token.
     """
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid Authorization header format.")
@@ -103,7 +114,22 @@ async def get_optional_user(authorization: Optional[str] = None) -> Optional[str
 @app.get("/", tags=["health"])
 def root():
     logger.info("Health check hit.")
-    return {"status": "ok", "message": "MyChatbot API is running 🚀"}
+    return {
+        "status": "ok",
+        "message": "MyChatbot API is running 🚀",
+        "version": "3.0.0-FREE",
+        "features": {
+            "multi_format_upload": True,
+            "ocr": True,
+            "vision_analysis": False,  # FREE version uses OCR only
+            "table_extraction": True,
+            "cost": "FREE - No API costs!"
+        },
+        "supported_formats": {
+            "pdf": [".pdf"],
+            "images": [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]
+        }
+    }
 
 
 @app.post("/rag-chat", tags=["chat"])
@@ -112,7 +138,7 @@ async def rag_chat(
     authorization: Optional[str] = Header(default=None),
 ):
     """
-    Dual-mode RAG endpoint.
+    Dual-mode RAG endpoint with multi-modal support.
     - No Authorization header → public mode → always fallback
     - Valid Authorization header → authenticated mode → RAG or fallback by relevance
     Returns {"mode": "rag"|"fallback", "response": "..."}
@@ -135,14 +161,17 @@ async def rag_chat(
         )
 
 
-@app.post("/upload-pdf", tags=["documents"])
-async def upload_pdf(
+@app.post("/upload-document", tags=["documents"])
+async def upload_document(
     file: UploadFile = File(...),
     authorization: Optional[str] = Header(default=None),
 ):
     """
+    Multi-format document upload endpoint (FREE version with OCR).
+    Supports: PDFs (text + scanned), Images (with OCR), Tables.
+    
     Authenticated endpoint — requires valid Supabase session.
-    Extracts PDF text, chunks it, and stores chunks with the user's user_id.
+    Processes document, extracts content, and stores with user's user_id.
     """
     # Require authentication
     if not authorization:
@@ -150,65 +179,101 @@ async def upload_pdf(
     user_id = await get_current_user(authorization)
 
     # Validate file type
-    if not file.filename.lower().endswith(".pdf"):
+    is_supported, file_category = DocumentProcessor.is_supported_format(file.filename)
+    if not is_supported:
         raise HTTPException(
             status_code=400,
-            detail="Only PDF files are accepted.",
+            detail=f"Unsupported file format. Supported: PDF, PNG, JPG, JPEG, WEBP, BMP, TIFF",
         )
 
-    logger.info("POST /upload-pdf | user_id=%s | filename=%s", user_id, file.filename)
+    logger.info("POST /upload-document | user_id=%s | filename=%s | type=%s", 
+                user_id, file.filename, file_category)
 
-    # Read bytes
+    # Read file bytes
     try:
-        pdf_bytes = await file.read()
+        file_bytes = await file.read()
     except Exception as exc:
         logger.error("Failed to read uploaded file: %s", exc)
         raise HTTPException(status_code=400, detail="Could not read the uploaded file.")
 
-    # Extract text
+    # Process document with FREE multi-modal processor (OCR only, no API costs)
     try:
-        text_pages = []
-        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-            total_pages = len(pdf.pages)
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text_pages.append(page_text.strip())
-
-        full_text = "\n\n".join(text_pages)
-        logger.info("Extracted text from %d/%d pages (%d chars).", len(text_pages), total_pages, len(full_text))
-    except Exception as exc:
-        logger.error("PDF text extraction failed: %s", exc)
-        raise HTTPException(
-            status_code=422,
-            detail="Could not extract text from the PDF. The file may be scanned or encrypted.",
+        processed = doc_processor.process_file(file_bytes, file.filename)
+        
+        if not processed.text.strip():
+            raise HTTPException(
+                status_code=422,
+                detail="No content could be extracted from this file. The file may be corrupted or empty.",
+            )
+        
+        logger.info(
+            "Processed %s: %d chars text, %d tables, %d images (FREE OCR)",
+            file.filename,
+            len(processed.text),
+            len(processed.tables),
+            len(processed.images)
         )
-
-    if not full_text.strip():
+        
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        logger.error("Document processing failed: %s", exc)
         raise HTTPException(
             status_code=422,
-            detail="No readable text found in this PDF. It may be a scanned image-only PDF.",
+            detail=f"Could not process the document: {str(exc)}",
         )
 
     # Chunk and store with user_id
     try:
-        chunks = chunk_text(full_text)
+        chunks = chunk_text(processed.text)
         stored = store_chunks(chunks, user_id)
-        logger.info("POST /upload-pdf | stored %d chunks for user_id=%s.", stored, user_id)
+        logger.info("POST /upload-document | stored %d chunks for user_id=%s.", stored, user_id)
     except Exception as exc:
-        logger.error("POST /upload-pdf | store error: %s", exc)
+        logger.error("POST /upload-document | store error: %s", exc)
         raise HTTPException(
             status_code=500,
-            detail="Text extracted but failed to store. Please try again.",
+            detail="Content extracted but failed to store. Please try again.",
         )
 
+    # Build response message
+    message_parts = [f"✅ '{file.filename}' processed successfully (FREE OCR):"]
+    
+    if processed.metadata.get("total_pages"):
+        message_parts.append(f"📄 {processed.metadata['total_pages']} pages")
+    
+    if processed.metadata.get("tables_found", 0) > 0:
+        message_parts.append(f"📊 {processed.metadata['tables_found']} tables extracted")
+    
+    if processed.metadata.get("images_found", 0) > 0:
+        message_parts.append(f"🔍 {processed.metadata['images_found']} images OCR'd")
+    
+    if processed.metadata.get("processing") == "full_ocr":
+        message_parts.append("🔍 Full OCR applied (scanned document)")
+    
+    message_parts.append(f"💾 {stored} chunks stored")
+    message_parts.append("💰 Cost: $0.00 (FREE)")
+
     return {
-        "status":   "ok",
+        "status": "ok",
         "filename": file.filename,
-        "pages":    total_pages,
-        "chunks":   stored,
-        "message":  f"✅ '{file.filename}' processed: {total_pages} pages → {stored} chunks stored.",
+        "file_type": file_category,
+        "chunks": stored,
+        "metadata": processed.metadata,
+        "message": " • ".join(message_parts),
     }
+
+
+# Legacy endpoint for backward compatibility
+@app.post("/upload-pdf", tags=["documents"])
+async def upload_pdf_legacy(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Legacy PDF upload endpoint - redirects to new multi-format endpoint.
+    Kept for backward compatibility with existing frontend.
+    """
+    return await upload_document(file, authorization)
 
 
 @app.delete("/clear-user-documents", tags=["documents"])
@@ -228,7 +293,7 @@ async def clear_user_documents(
     try:
         deleted = delete_user_documents(user_id)
         return {
-            "status":  "ok",
+            "status": "ok",
             "deleted": deleted,
             "message": f"🗑️ {deleted} document chunk(s) permanently deleted.",
         }
