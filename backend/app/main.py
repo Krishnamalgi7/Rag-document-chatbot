@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.config import SUPABASE_URL, SUPABASE_ANON_KEY
-from app.rag import process_chat, chunk_text, store_chunks, delete_user_documents
+from app.rag import process_chat, chunk_text, store_chunks, delete_user_documents, generate_session_summary
 from app.document_processor import DocumentProcessor
 
 # ---------------------------------------------------------------------------
@@ -54,6 +54,9 @@ doc_processor = DocumentProcessor()
 
 class ChatRequest(BaseModel):
     message: str
+
+class SessionSummaryRequest(BaseModel):
+    messages: list[dict]
 
 # ---------------------------------------------------------------------------
 # Auth helper — verifies Supabase JWT and returns user_id
@@ -158,6 +161,35 @@ async def rag_chat(
         raise HTTPException(
             status_code=500,
             detail="Something went wrong while processing your message. Please try again.",
+        )
+
+
+@app.post("/api/session/summary", tags=["chat"])
+async def session_summary(
+    request: SessionSummaryRequest,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Authenticated endpoint to generate a professional summary of the user's session
+    before logout.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Login required.")
+    user_id = await get_current_user(authorization)
+
+    logger.info("POST /api/session/summary | user_id=%s | history_len=%d", user_id, len(request.messages))
+
+    if not request.messages:
+        return {"summary": "No chat history to summarize."}
+
+    try:
+        summary_text = generate_session_summary(request.messages)
+        return {"summary": summary_text}
+    except Exception as exc:
+        logger.error("POST /api/session/summary | error: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate session summary. Please try again.",
         )
 
 

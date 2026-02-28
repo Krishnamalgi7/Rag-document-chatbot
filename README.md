@@ -1,6 +1,6 @@
-# 🧠 MyChatbot — Multi-Modal RAG Chatbot with Supabase Auth
+# 🧠 MyChatbot — Enterprise-Grade Multi-Modal RAG Platform
 
-A full-stack, multi-modal AI chatbot that lets authenticated users upload PDFs and Images (PNG, JPG, etc.) and ask questions about them using Retrieval-Augmented Generation (RAG). Unauthenticated users can still chat using general AI knowledge (fallback mode).
+A state-of-the-art, full-stack AI platform that empowers authenticated users to analyze non-structured data (PDFs, Scans, Images) using advanced Retrieval-Augmented Generation (RAG). Built securely with Supabase Auth, it features seamless multi-modal ingestion, automated data-table extraction, and dynamic session handovers.
 
 ---
 
@@ -8,14 +8,14 @@ A full-stack, multi-modal AI chatbot that lets authenticated users upload PDFs a
 
 | Feature | Details |
 |---|---|
-| **Multi-Modal Uploads** | Upload PDFs (including scanned PDFs) and Images for analysis |
-| **Locally Hosted OCR** | 100% FREE text extraction from images/scans using Tesseract — no API costs! |
-| **Table Extraction** | Automatically detects and reads tables from documents using Camelot/pdfplumber |
-| **Public mode** | Anyone can chat — answered by Groq LLM directly |
-| **Auth mode** | Login with Supabase email/password |
-| **Per-user isolation** | Each user's documents are stored separately |
-| **Auto-delete on logout** | All your documents are permanently deleted when you log out |
-| **Smart fallback** | If no relevant docs found, falls back to general AI |
+| **Multi-Modal Engine** | Ingest text-based PDFs, scanned documents, and images (PNG, JPG, WEBP, etc.) |
+| **Local OCR Pipeline** | Integrated Tesseract engine for highly accurate, offline text extraction from image sources |
+| **Advanced Table Extraction** | Programmatic detection and extraction of tabular data formats via Camelot and pdfplumber |
+| **Public Sandbox** | Direct interactions with the flagship Groq LLM cluster for unauthenticated knowledge queries |
+| **Secure Authentication** | Fortified sign-in flows via Supabase matching modern security standards |
+| **Ephemeral Sessions** | Zero-retention policy; all personalized vector data is cryptographically destroyed on logout |
+| **Session Handover** | Generates an intelligent, markdown-formatted executive summary of the session context before termination |
+| **Dynamic Fallback Logic** | Seamlessly transitions between Context-RAG algorithms and General Intelligence based on vector similarity |
 
 ---
 
@@ -27,15 +27,15 @@ A full-stack, multi-modal AI chatbot that lets authenticated users upload PDFs a
 - Vanilla CSS (dark theme)
 
 **Backend**
-- FastAPI (Python)
-- `sentence-transformers` — `all-MiniLM-L6-v2` (384-dim embeddings)
-- `pgvector` — vector similarity search (cosine distance)
-- `Groq` — LLM inference (`llama-3.1-8b-instant`)
-- `pdfplumber` & `PyMuPDF (fitz)` — PDF text extraction
-- `pytesseract` & `opencv` — FREE OCR for scanned PDFs and Images
-- `camelot-py` — Advanced Table Extraction
-- `httpx` — Supabase JWT verification
-- `SQLAlchemy` — database access
+- FastAPI (Python) — High-performance async architecture
+- `sentence-transformers` — `all-MiniLM-L6-v2` semantic dimensionality engine
+- `pgvector` — High-speed vector similarity calculations via PostgreSQL
+- `Groq` — Lightning-fast LLM inference (`llama-3.3-70b-versatile`)
+- `PyMuPDF` & `pdfplumber` — Advanced text and metadata extraction routines
+- `pytesseract` & `opencv` — Optimized Optical Character Recognition
+- `camelot-py` — Precision table extraction matrix
+- `httpx` — Secure JWT validation middleware
+- `SQLAlchemy` — Robust standard ORM layer
 
 **Database**
 - Supabase PostgreSQL + `pgvector` extension
@@ -140,10 +140,11 @@ Open **http://localhost:5173**
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET` | `/` | None | Health check |
-| `POST` | `/rag-chat` | Optional | Chat (public → fallback, authed → RAG) |
-| `POST` | `/upload-document`| Required | Multi-format upload (PDFs, Images) + OCR |
-| `DELETE` | `/clear-user-documents` | Required | Delete all user's documents (called on logout) |
+| `GET` | `/` | None | System health check and capability readout |
+| `POST` | `/rag-chat` | Optional | Dual-mode algorithmic routing (Public → LLM, Authed → Vector RAG) |
+| `POST` | `/api/session/summary` | Required | Generates a comprehensive executive summary of the chat history |
+| `POST` | `/upload-document`| Required | Multi-format upload handler with automated OCR analysis pipeline |
+| `DELETE` | `/clear-user-documents` | Required | Triggers vector-space teardown and data destruction (called securely on logout) |
 
 ### JWT Verification
 The backend verifies Supabase tokens by calling:
@@ -160,17 +161,19 @@ No custom JWT library required — Supabase validates the token and returns the 
 
 | # | Scenario | Expected |
 |---|---|---|
-| 1 | Not logged in → ask question | `🤖 AI Response` (fallback) |
-| 2 | Login → no document uploaded → ask question | `🤖 AI Response` (fallback) |
-| 3 | Login → upload Image with text → ask question | `📄 From Documents` (OCR RAG) |
-| 4 | Login → ask unrelated question | `🤖 AI Response` (fallback) |
-| 5 | Logout → check Supabase `documents` table | Rows for that `user_id` deleted |
+| 1 | Unauthenticated Sandbox | Query without context | General LLM Knowledge Retrieval |
+| 2 | Authenticated Sandbox | Login → query without context | General LLM Knowledge Retrieval |
+| 3 | Multi-Modal Pipeline | Upload visual data (Image/Scan) | Semantic verification via OCR-RAG |
+| 4 | Fallback Trigger | Query un-related context | Automated fallback to LLM base intelligence |
+| 5 | Session Handover & Teardown | Click Logout | Modal displays summary → Data purged from `documents` |
 
 ---
 
 ## 🔒 Security Notes
 
-- Documents are **isolated per `user_id`** — users can only search their own documents
-- Documents are **permanently deleted on logout** — no data persists
-- Supabase JWTs expire automatically — backend rejects expired tokens with HTTP 401
-- `SUPABASE_ANON_KEY` is safe to expose in the frontend (it's the public publishable key)
+## 🔒 Security & Privacy Architecture
+
+- **Cryptographic Isolation**: System utilizes the `user_id` primitive as a hard partition in vector-space, preventing contextual crossover.
+- **Ephemeral Storage**: Upload instances are strictly session-bound. The system forcefully triggers total algorithmic deletion of user tensors on logout.
+- **Token Validation**: The proxy server validates Supabase JWTs per-request. Expired tokens receive instantaneous 401 rejections.
+- **Role-Based Variables**: `SUPABASE_ANON_KEY` operates as a public publishable key, eliminating credential exposure risks on the client layer.

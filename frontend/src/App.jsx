@@ -39,6 +39,11 @@ export default function App() {
   const [uploadFeedback, setUploadFeedback] = useState(null);
   const [isDragging, setIsDragging]         = useState(false);
 
+  // ── Session Handover state ──────────────────────────────────────────────
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [sessionSummary, setSessionSummary]     = useState("");
+  const [gettingSummary, setGettingSummary]     = useState(false);
+
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
   const fileInputRef   = useRef(null);
@@ -96,25 +101,68 @@ export default function App() {
     }
   };
 
-  // ── Auth: logout ────────────────────────────────────────────────────────
+  // ── Auth: logout interception ───────────────────────────────────────────
   const handleLogout = async () => {
-    // Step 1: Delete user's documents from the vector DB
+    // Intercept logout to fetch session summary and show modal
+    if (session?.access_token) {
+      setGettingSummary(true);
+      setShowSummaryModal(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/session/summary`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ messages }),
+        });
+        if (!res.ok) throw new Error("Failed to generate summary");
+        const data = await res.json();
+        setSessionSummary(data.summary);
+      } catch (err) {
+        console.error("Summary error:", err);
+        setSessionSummary("Your session has ended, but we couldn't generate a summary at this time.");
+      } finally {
+        setGettingSummary(false);
+      }
+    } else {
+      finalizeLogout();
+    }
+  };
+
+  const finalizeLogout = async () => {
     if (session?.access_token) {
       try {
         await fetch(`${API_BASE}/clear-user-documents`, {
           method:  "DELETE",
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        logger_info("Documents cleared for user on logout.");
-      } catch {
-        // Non-blocking — still sign out even if deletion fails
+        console.info("[App]", "Documents cleared for user on logout.");
+      } catch (err) {
+        console.error("Failed to clear documents:", err);
       }
     }
-    // Step 2: Sign out from Supabase
+    // Sign out from Supabase only after clearing documents
     await supabase.auth.signOut();
     setMessages([]);
     setSelectedFile(null);
     setUploadFeedback(null);
+    setShowSummaryModal(false);
+    setSessionSummary("");
+  };
+
+  const copySummary = () => {
+    navigator.clipboard.writeText(sessionSummary);
+  };
+
+  const downloadSummary = () => {
+    const blob = new Blob([sessionSummary], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "MyChatbot_Session_Summary.txt";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   function logger_info(msg) { console.info("[App]", msg); }
@@ -291,7 +339,11 @@ export default function App() {
 
             
             <p className="sidebar-hint">
-              ⚠️ Current version supports PDFs (text & scanned) and Images via FREE OCR. Files are private & deleted on logout.
+              📂 System supports PDFs and images kindly authenticate to use these features or just chat freely   
+              
+            </p>
+            <p className="sidebar-hint">
+              🔐 Files stay private and are securely deleted on logout.
             </p>
           </div>
         ) : (
@@ -363,9 +415,7 @@ export default function App() {
               </div>
             )}
 
-            <p className="sidebar-hint">
-              Documents stay private and are deleted when you log out.
-            </p>
+         <p className="sidebar-hint"> 🔐 At logout, your documents are securely deleted to protect your privacy. </p>
           </>
         )}
       </aside>
@@ -453,6 +503,77 @@ export default function App() {
           </p>
         </div>
       </main>
+
+      {/* ── Session Handover Modal ────────────────────────────────────── */}
+      {showSummaryModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <header className="modal-header">
+              <h2>End of Session Summary</h2>
+              <button 
+                className="btn-close-modal" 
+                onClick={() => {
+                  setShowSummaryModal(false);
+                  setGettingSummary(false);
+                }}
+                disabled={gettingSummary}
+                title="Cancel logout"
+              >✕</button>
+            </header>
+
+            <div className="modal-body">
+              {gettingSummary ? (
+                <div className="summary-loading">
+                  <div className="loading-spinner"></div>
+                  <p>Analyzing chat history and generating your session summary...</p>
+                </div>
+              ) : (
+                <div className="summary-markdown">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {sessionSummary}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            <footer className="modal-footer">
+              <div className="modal-tools">
+                <button 
+                  className="btn-outline" 
+                  onClick={copySummary} 
+                  disabled={gettingSummary || !sessionSummary}
+                >
+                  📋 Copy Text
+                </button>
+                <button 
+                  className="btn-outline" 
+                  onClick={downloadSummary} 
+                  disabled={gettingSummary || !sessionSummary}
+                >
+                  📥 Download .txt
+                </button>
+              </div>
+              <div className="modal-actions">
+                <button 
+                  className="btn-cancel" 
+                  onClick={() => setShowSummaryModal(false)}
+                  disabled={gettingSummary}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn-danger" 
+                  onClick={finalizeLogout}
+                  disabled={gettingSummary}
+                >
+                  Finalize Logout & Delete Data
+                </button>
+              </div>
+            </footer>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

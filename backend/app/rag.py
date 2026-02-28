@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Constants  (DO NOT CHANGE — working configuration)
 # ---------------------------------------------------------------------------
 EMBEDDING_MODEL      = "all-MiniLM-L6-v2"   # dim = 384
-GROQ_MODEL           = "llama-3.1-8b-instant"
+GROQ_MODEL           = "llama-3.3-70b-versatile"
 SIMILARITY_THRESHOLD = 1.0                   # cosine DISTANCE 0-2: < 1.2 keeps related docs
 TOP_K                = 3                     # max chunks to retrieve
 CHUNK_SIZE           = 500                   # target tokens per chunk
@@ -261,3 +261,44 @@ def process_chat(user_message: str, user_id: str | None = None) -> dict:
 
     logger.info("Mode: FALLBACK (no relevant chunks for user %s).", user_id)
     return {"mode": "fallback", "response": _fallback_response(user_message)}
+
+
+# ---------------------------------------------------------------------------
+# Session Summarization  (NEW)
+# ---------------------------------------------------------------------------
+
+def generate_session_summary(chat_history: list[dict]) -> str:
+    """
+    Given a list of chat messages, generate a professional summary of the session.
+    """
+    logger.info("Generating session summary from %d messages.", len(chat_history))
+    
+    # Format the chat history for the prompt
+    history_text = ""
+    for msg in chat_history:
+        role = msg.get("role", "unknown").upper()
+        text = msg.get("text", "")
+        mode = msg.get("mode", "")
+        mode_str = f" [Context: {mode.upper()}]" if mode else ""
+        history_text += f"{role}{mode_str}: {text}\n\n"
+        
+    completion = groq_client.chat.completions.create(
+        model=GROQ_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a professional AI assistant tasked with summarizing a user's chat session.\n\n"
+                    "Analyze the provided chat history and generate a concise, professional summary.\n"
+                    "Identify:\n"
+                    "1. The general topic or purpose of the session.\n"
+                    "2. The top 3 key insights discussed.\n"
+                    "3. If any documents were explicitly mentioned or used (flagged by 'RAG' context), note them.\n\n"
+                    "Format the output strictly in Markdown using headings and bullet points."
+                ),
+            },
+            {"role": "user", "content": f"Here is the chat history:\n\n{history_text}"},
+        ],
+        temperature=0.3,
+    )
+    return completion.choices[0].message.content
