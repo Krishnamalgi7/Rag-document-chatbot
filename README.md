@@ -1,4 +1,4 @@
-# 🧠 MyChatbot — Enterprise-Grade Multi-Modal RAG Platform
+# 🤖 Arch AI Chatbot — Enterprise-Grade Multi-Modal RAG Platform
 
 A state-of-the-art, full-stack AI platform that empowers authenticated users to analyze non-structured data (PDFs, Scans, Images) using advanced Retrieval-Augmented Generation (RAG). Built securely with Supabase Auth, it features seamless multi-modal ingestion, automated data-table extraction, and dynamic session handovers.
 
@@ -9,13 +9,17 @@ A state-of-the-art, full-stack AI platform that empowers authenticated users to 
 | Feature | Details |
 |---|---|
 | **Multi-Modal Engine** | Ingest text-based PDFs, scanned documents, and images (PNG, JPG, WEBP, etc.) |
+| **Real-Time Streaming** | Token-by-token generative output for ultra-low latency conversational UX over `/rag-chat/stream` |
+| **Context-Aware Memory** | Dynamic injection of chat history ensuring continuous, non-atomic dialogue context |
+| **Semantic Intelligence** | Query expansion, hybrid search, and algorithmic re-ranking for optimal vector yields |
+| **Confidence Scoring** | Real-time mathematical distance metrics translating to visual UI confidence badges |
 | **Local OCR Pipeline** | Integrated Tesseract engine for highly accurate, offline text extraction from image sources |
-| **Advanced Table Extraction** | Programmatic detection and extraction of tabular data formats via Camelot and pdfplumber |
+| **Advanced Table Extraction** | Programmatic extraction of tabular data formats via Camelot and pdfplumber |
 | **Public Sandbox** | Direct interactions with the flagship Groq LLM cluster for unauthenticated knowledge queries |
 | **Secure Authentication** | Fortified sign-in flows via Supabase matching modern security standards |
 | **Ephemeral Sessions** | Zero-retention policy; all personalized vector data is cryptographically destroyed on logout |
-| **Session Handover** | Generates an intelligent, markdown-formatted executive summary of the session context before termination |
-| **Dynamic Fallback Logic** | Seamlessly transitions between Context-RAG algorithms and General Intelligence based on vector similarity |
+| **Session Handover** | Intelligent, markdown-formatted, and smartly-truncated executive summaries upon termination |
+| **Dynamic Fallback Logic** | Seamless transitions between Context-RAG algorithms and General Intelligence |
 
 ---
 
@@ -45,7 +49,7 @@ A state-of-the-art, full-stack AI platform that empowers authenticated users to 
 ## 📁 Project Structure
 
 ```
-Mychatbot/
+ArchAI/
 ├── backend/
 │   ├── app/
 │   │   ├── config.py             # Env vars (DATABASE_URL, GROQ_API_KEY, SUPABASE_*)
@@ -141,7 +145,7 @@ Open **http://localhost:5173**
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET` | `/` | None | System health check and capability readout |
-| `POST` | `/rag-chat` | Optional | Dual-mode algorithmic routing (Public → LLM, Authed → Vector RAG) |
+| `POST` | `/rag-chat/stream` | Optional | Dual-mode algorithmic routing with Streaming SSE (Public → LLM, Authed → Vector RAG) |
 | `POST` | `/api/session/summary` | Required | Generates a comprehensive executive summary of the chat history |
 | `POST` | `/upload-document`| Required | Multi-format upload handler with automated OCR analysis pipeline |
 | `DELETE` | `/clear-user-documents` | Required | Triggers vector-space teardown and data destruction (called securely on logout) |
@@ -168,8 +172,6 @@ No custom JWT library required — Supabase validates the token and returns the 
 | 5 | Session Handover & Teardown | Click Logout | Modal displays summary → Data purged from `documents` |
 
 ---
-
-## 🔒 Security Notes
 
 ## 🔒 Security & Privacy Architecture
 

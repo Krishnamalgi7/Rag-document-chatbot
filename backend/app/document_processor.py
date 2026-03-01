@@ -55,8 +55,7 @@ class DocumentProcessor:
 
     def __init__(self):
         """Initialize processor - NO API KEYS NEEDED!"""
-        logger.info("✅ DocumentProcessor initialized (FREE VERSION - OCR only)")
-        logger.info("💰 No API costs - Everything runs locally!")
+        logger.info("✅ DocumentProcessor initialized")
 
     def process_file(self, file_bytes: bytes, filename: str) -> ProcessedContent:
         """

@@ -27,6 +27,7 @@ export default function App() {
   const [authMode, setAuthMode]         = useState("login"); // "login" | "signup"
   const [authLoading, setAuthLoading]   = useState(false);
   const [authError, setAuthError]       = useState("");
+  const [isMorphing, setIsMorphing]     = useState(false);
 
   // ── Chat state ──────────────────────────────────────────────────────────
   const [messages, setMessages] = useState([]);
@@ -69,6 +70,17 @@ export default function App() {
   }, [messages, loading]);
 
   // ── Auth: login / signup ────────────────────────────────────────────────
+  const handleAuthModeToggle = () => {
+    setIsMorphing(true);
+    setAuthError("");
+    
+    // Wait for morph-out animation to complete
+    setTimeout(() => {
+      setAuthMode(m => m === "login" ? "signup" : "login");
+      setIsMorphing(false);
+    }, 250); // Match the morphOut animation duration
+  };
+
   const handleAuth = async () => {
     if (!authEmail.trim() || !authPassword.trim()) {
       setAuthError("Email and password are required.");
@@ -160,22 +172,30 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "MyChatbot_Session_Summary.txt";
+    a.download = "ArchAI_Session_Summary.txt";
     a.click();
     URL.revokeObjectURL(url);
   };
 
   function logger_info(msg) { console.info("[App]", msg); }
 
-  // ── Send chat message ───────────────────────────────────────────────────
+  // ── Send chat message (STREAMING) ─────────────────────────────────────
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || loading) return;
 
+    // Add user message
     setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     setLoading(true);
+
+    // Placeholder AI message that we'll fill token by token
+    const aiMsgIndex = messages.length + 1;
+    setMessages((prev) => [
+      ...prev,
+      { role: "ai", text: "", mode: "loading", confidence: null },
+    ]);
 
     try {
       const headers = { "Content-Type": "application/json" };
@@ -183,10 +203,18 @@ export default function App() {
         headers["Authorization"] = `Bearer ${session.access_token}`;
       }
 
-      const res = await fetch(`${API_BASE}/rag-chat`, {
+      const res = await fetch(`${API_BASE}/rag-chat/stream`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({
+          message: text,
+          // Send last 6 messages as chat history for context
+          chat_history: messages.slice(-6).map((m) => ({
+            role: m.role === "ai" ? "assistant" : m.role,
+            text: m.text,
+            mode: m.mode,
+          })),
+        }),
       });
 
       if (!res.ok) {
@@ -194,21 +222,51 @@ export default function App() {
         throw new Error(err.detail || `Server error ${res.status}`);
       }
 
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "ai", text: data.response, mode: data.mode },
-      ]);
+      // Read mode and confidence from response headers
+      const mode       = res.headers.get("X-Mode")       || "fallback";
+      const confidence = res.headers.get("X-Confidence") || "N/A";
+      const sourceRaw  = res.headers.get("X-Source")     || "";
+      // Re-add emojis on frontend (headers are ASCII-only)
+      const source = sourceRaw === "From your document"
+        ? "📄 Answered from your document"
+        : "🤖 Answered from general AI knowledge";
+
+      // Update the placeholder message with mode/confidence immediately
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === aiMsgIndex ? { ...m, mode, confidence } : m
+        )
+      );
+
+      // Read stream token by token
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        // Append each token to the AI message
+        setMessages((prev) =>
+          prev.map((m, i) =>
+            i === aiMsgIndex ? { ...m, text: m.text + chunk } : m
+          )
+        );
+      }
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "error",
-          text: err.message.includes("Failed to fetch")
-            ? "Cannot reach the server. Is the backend running?"
-            : err.message,
-        },
-      ]);
+      // Replace placeholder with error
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === aiMsgIndex
+            ? {
+                role: "error",
+                text: err.message.includes("Failed to fetch")
+                  ? "Cannot reach the server. Is the backend running?"
+                  : err.message,
+              }
+            : m
+        )
+      );
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -291,14 +349,14 @@ export default function App() {
       {/* ── Sidebar ──────────────────────────────────────────────── */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">🧠</div>
-          <div><h1>MyChatbot</h1></div>
+          <div className="sidebar-logo-icon">🤖</div>
+          <div><h1>Arch AI</h1></div>
         </div>
 
         {/* ── AUTH PANEL ── */}
         {!user ? (
           /* Not logged in — show login/signup form */
-          <div className="auth-panel">
+          <div className={`auth-panel ${isMorphing ? 'morphing-out' : ''}`}>
             <p className="sidebar-title">
               {authMode === "login" ? "Login to upload Documents" : "Create an account"}
             </p>
@@ -332,7 +390,7 @@ export default function App() {
 
             <button
               className="btn-auth-toggle"
-              onClick={() => { setAuthMode(m => m === "login" ? "signup" : "login"); setAuthError(""); }}
+              onClick={handleAuthModeToggle}
             >
               {authMode === "login" ? "No account? Sign up" : "Already have an account? Login"}
             </button>
@@ -424,7 +482,7 @@ export default function App() {
       <main className="chat-main">
         <header className="chat-header">
           <div className="chat-header-dot" />
-          <h2>Your Private AI Assistant — Powered by RAG</h2>
+          <h2>Ephemeral AI Assistant — Powered by RAG</h2>
           {!user && (
             <span className="public-badge">🔓 Public Mode</span>
           )}
@@ -446,10 +504,15 @@ export default function App() {
             <>
               {messages.map((msg, i) => (
                 <div key={i} className={`message-row ${msg.role}`}>
-                  {msg.role === "ai" && (
+                  {msg.role === "ai" && msg.mode !== "loading" && (
                     <span className={`mode-badge ${msg.mode === "rag" ? "rag" : "fall"}`}>
-                      {msg.mode === "rag" ? "📄 From Documents" : "🤖 AI Response"}
+                      {msg.mode === "rag"
+                        ? `📄 From Documents${msg.confidence ? ` · ${msg.confidence} confidence` : ""}`
+                        : "🤖 AI Response"}
                     </span>
+                  )}
+                  {msg.role === "ai" && msg.mode === "loading" && (
+                    <span className="mode-badge fall">⏳ Thinking…</span>
                   )}
                   <div className="message-bubble">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>

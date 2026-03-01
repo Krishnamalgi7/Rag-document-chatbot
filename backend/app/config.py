@@ -30,4 +30,4 @@ if not SUPABASE_ANON_KEY:
     raise ValueError(f"❌ SUPABASE_ANON_KEY is not set. Looked in: {_env_path}")
 
 print("✅ Configuration loaded successfully")
-print("💰 FREE MODE: Using Tesseract OCR (no API costs!)")
+print("Kindly Wait to completely run backend")

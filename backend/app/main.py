@@ -4,11 +4,16 @@ import logging.config
 import httpx
 from fastapi import FastAPI, HTTPException, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
 from app.config import SUPABASE_URL, SUPABASE_ANON_KEY
-from app.rag import process_chat, chunk_text, store_chunks, delete_user_documents, generate_session_summary
+from app.rag import (
+    process_chat, chunk_text, store_chunks, delete_user_documents,
+    generate_session_summary, expand_query, search_similar,
+    rerank_chunks, stream_rag_response,
+)
 from app.document_processor import DocumentProcessor
 
 # ---------------------------------------------------------------------------
@@ -23,7 +28,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-app = FastAPI(title="MyChatbot API - Multi-Modal FREE", version="3.0.0-FREE")
+app = FastAPI(title="Arch AI Chatbot API - Multi-Modal", version="3.0.0")
 
 # ---------------------------------------------------------------------------
 # CORS - Updated for development
@@ -54,6 +59,7 @@ doc_processor = DocumentProcessor()
 
 class ChatRequest(BaseModel):
     message: str
+    chat_history: Optional[list[dict]] = None  # last N messages for context
 
 class SessionSummaryRequest(BaseModel):
     messages: list[dict]
@@ -119,7 +125,7 @@ def root():
     logger.info("Health check hit.")
     return {
         "status": "ok",
-        "message": "MyChatbot API is running 🚀",
+        "message": "Arch AI Chatbot API is running 🚀",
         "version": "3.0.0-FREE",
         "features": {
             "multi_format_upload": True,
@@ -153,7 +159,7 @@ async def rag_chat(
     logger.info("POST /rag-chat | user_id=%s | message=%r", user_id or "public", request.message[:80])
 
     try:
-        result = process_chat(request.message, user_id=user_id)
+        result = process_chat(request.message, user_id=user_id, chat_history=request.chat_history)
         logger.info("POST /rag-chat | mode=%s", result["mode"])
         return result
     except Exception as exc:
@@ -162,6 +168,63 @@ async def rag_chat(
             status_code=500,
             detail="Something went wrong while processing your message. Please try again.",
         )
+
+
+@app.post("/rag-chat/stream", tags=["chat"])
+async def rag_chat_stream(
+    request: ChatRequest,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Streaming version of /rag-chat.
+    Returns tokens as they arrive from Groq — no waiting for full response.
+    Response headers include X-Mode and X-Confidence for the frontend.
+
+    Frontend reads response as a stream and appends tokens word by word.
+    """
+    if not request.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    user_id = await get_optional_user(authorization)
+    logger.info(
+        "POST /rag-chat/stream | user_id=%s | message=%r",
+        user_id or "public", request.message[:80],
+    )
+
+    # Determine mode and retrieve context (same logic as process_chat)
+    if user_id is None:
+        # Public mode — stream fallback directly
+        mode       = "fallback"
+        confidence = "N/A"
+        docs       = []
+    else:
+        expanded = expand_query(request.message)
+        docs, avg_distance = search_similar(expanded, user_id)
+        if docs:
+            docs       = rerank_chunks(expanded, docs)
+            mode       = "rag"
+            confidence = (
+                "High"   if avg_distance < 0.4 else
+                "Medium" if avg_distance < 0.6 else
+                "Low"    if avg_distance < 0.7 else
+                "Very Low"
+            )
+        else:
+            mode       = "fallback"
+            confidence = "N/A"
+            docs       = []
+
+    # Stream response with mode/confidence in headers for React to read
+    return StreamingResponse(
+        stream_rag_response(docs, request.message, request.chat_history),
+        media_type="text/plain",
+        headers={
+            "X-Mode"       : mode,
+            "X-Confidence" : confidence,
+            "X-Source"     : "From your document" if mode == "rag" else "General AI knowledge",
+            "Access-Control-Expose-Headers": "X-Mode, X-Confidence, X-Source",
+        },
+    )
 
 
 @app.post("/api/session/summary", tags=["chat"])
