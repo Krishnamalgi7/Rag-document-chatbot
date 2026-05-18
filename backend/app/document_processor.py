@@ -1,8 +1,3 @@
-"""
-Multi-modal Document Processor - FREE VERSION (No Vision API)
-Handles PDFs, Images, Scanned Documents, Tables - 100% FREE with OCR
-"""
-
 import io
 import logging
 from pathlib import Path
@@ -11,7 +6,7 @@ from dataclasses import dataclass
 
 # PDF Processing
 import pdfplumber
-import fitz  # PyMuPDF
+import fitz  
 from pdf2image import convert_from_bytes
 
 # Image Processing
@@ -55,7 +50,7 @@ class DocumentProcessor:
 
     def __init__(self):
         """Initialize processor - NO API KEYS NEEDED!"""
-        logger.info("✅ DocumentProcessor initialized")
+        logger.info(" DocumentProcessor initialized")
 
     def process_file(self, file_bytes: bytes, filename: str) -> ProcessedContent:
         """
@@ -111,7 +106,7 @@ class DocumentProcessor:
                     else:
                         text_content.append(f"[Page {page_num}]\n{page_text}")
 
-                    # Extract tables from this page (FREE!)
+                    # Extract tables from this page
                     page_tables = page.extract_tables()
                     if page_tables:
                         for table_idx, table in enumerate(page_tables):
@@ -143,7 +138,7 @@ class DocumentProcessor:
                         base_image = doc.extract_image(xref)
                         image_bytes = base_image["image"]
 
-                        # Apply FREE OCR to image
+                        # Apply OCR to image
                         img_pil = Image.open(io.BytesIO(image_bytes))
                         ocr_text = self._ocr_image(img_pil)
 
@@ -162,7 +157,7 @@ class DocumentProcessor:
         except Exception as e:
             logger.warning(f"Image extraction failed: {e}")
 
-        # Step 3: Advanced table extraction with Camelot (FREE!)
+        # Step 3: Advanced table extraction with Camelot
         if len(tables) == 0:
             try:
                 import tempfile
@@ -186,7 +181,7 @@ class DocumentProcessor:
         metadata["text_length"] = len(full_text)
         metadata["tables_found"] = len(tables)
         metadata["images_found"] = len(images)
-        metadata["processing_cost"] = "FREE - No API costs!"
+        metadata["processing_cost"] = "No API costs!"
 
         return ProcessedContent(
             text=full_text,
@@ -197,9 +192,9 @@ class DocumentProcessor:
 
     def _process_pdf_with_ocr(self, pdf_bytes: bytes, filename: str) -> ProcessedContent:
         """
-        Fallback: Full OCR processing for scanned PDFs (100% FREE with Tesseract)
+        Fallback: Full OCR processing for scanned PDFs
         """
-        logger.info("Applying full FREE OCR to PDF")
+        logger.info("Applying full OCR to PDF")
 
         text_content = []
         images = convert_from_bytes(pdf_bytes, dpi=300, poppler_path=r"C:\Users\ASUS\poppler\Library\bin")
@@ -207,7 +202,7 @@ class DocumentProcessor:
         for page_num, img in enumerate(images, 1):
             ocr_text = self._ocr_image(img)
             text_content.append(f"[Page {page_num} - Full OCR]\n{ocr_text}")
-            logger.info(f"✅ Page {page_num} OCR complete (FREE)")
+            logger.info(f" Page {page_num} OCR complete")
 
         full_text = "\n\n".join(text_content)
 
@@ -220,7 +215,7 @@ class DocumentProcessor:
                 "type": "pdf_scanned",
                 "total_pages": len(images),
                 "processing": "full_ocr",
-                "processing_cost": "FREE - Tesseract OCR"
+                "processing_cost": "Tesseract OCR"
             }
         )
 
@@ -232,15 +227,15 @@ class DocumentProcessor:
 
         img = Image.open(io.BytesIO(image_bytes))
 
-        # Apply FREE OCR for any text in the image
+        # OCR for any text in the image
         ocr_text = self._ocr_image(img)
 
         if ocr_text.strip():
             text_content = f"[OCR Text from Image]\n{ocr_text}"
-            logger.info(f"✅ Image OCR complete (FREE)")
+            logger.info(f" Image OCR complete")
         else:
             text_content = "[No text detected in image]"
-            logger.info("⚠️ No text found in image")
+            logger.info("No text found in image")
 
         return ProcessedContent(
             text=text_content,
@@ -270,7 +265,7 @@ class DocumentProcessor:
             # 2. Thresholding
             _, img_cv = cv2.threshold(img_cv, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-            # OCR with Tesseract (100% FREE!)
+            # OCR with Tesseract
             text = pytesseract.image_to_string(Image.fromarray(img_cv), lang='eng')
 
             return text.strip()

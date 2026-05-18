@@ -28,6 +28,7 @@ export default function App() {
   const [authLoading, setAuthLoading]   = useState(false);
   const [authError, setAuthError]       = useState("");
   const [isMorphing, setIsMorphing]     = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // ── Chat state ──────────────────────────────────────────────────────────
   const [messages, setMessages] = useState([]);
@@ -74,11 +75,14 @@ export default function App() {
     setIsMorphing(true);
     setAuthError("");
     
-    // Wait for morph-out animation to complete
     setTimeout(() => {
       setAuthMode(m => m === "login" ? "signup" : "login");
       setIsMorphing(false);
-    }, 250); // Match the morphOut animation duration
+    }, 250);
+  };
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
   };
 
   const handleAuth = async () => {
@@ -115,7 +119,6 @@ export default function App() {
 
   // ── Auth: logout interception ───────────────────────────────────────────
   const handleLogout = async () => {
-    // Intercept logout to fetch session summary and show modal
     if (session?.access_token) {
       setGettingSummary(true);
       setShowSummaryModal(true);
@@ -154,7 +157,6 @@ export default function App() {
         console.error("Failed to clear documents:", err);
       }
     }
-    // Sign out from Supabase only after clearing documents
     await supabase.auth.signOut();
     setMessages([]);
     setSelectedFile(null);
@@ -177,20 +179,16 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  function logger_info(msg) { console.info("[App]", msg); }
-
   // ── Send chat message (STREAMING) ─────────────────────────────────────
   const sendMessage = async () => {
     const text = input.trim();
     if (!text || loading) return;
 
-    // Add user message
     setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     setLoading(true);
 
-    // Placeholder AI message that we'll fill token by token
     const aiMsgIndex = messages.length + 1;
     setMessages((prev) => [
       ...prev,
@@ -208,7 +206,6 @@ export default function App() {
         headers,
         body: JSON.stringify({
           message: text,
-          // Send last 6 messages as chat history for context
           chat_history: messages.slice(-6).map((m) => ({
             role: m.role === "ai" ? "assistant" : m.role,
             text: m.text,
@@ -222,23 +219,15 @@ export default function App() {
         throw new Error(err.detail || `Server error ${res.status}`);
       }
 
-      // Read mode and confidence from response headers
       const mode       = res.headers.get("X-Mode")       || "fallback";
       const confidence = res.headers.get("X-Confidence") || "N/A";
-      const sourceRaw  = res.headers.get("X-Source")     || "";
-      // Re-add emojis on frontend (headers are ASCII-only)
-      const source = sourceRaw === "From your document"
-        ? "📄 Answered from your document"
-        : "🤖 Answered from general AI knowledge";
 
-      // Update the placeholder message with mode/confidence immediately
       setMessages((prev) =>
         prev.map((m, i) =>
           i === aiMsgIndex ? { ...m, mode, confidence } : m
         )
       );
 
-      // Read stream token by token
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
 
@@ -246,7 +235,6 @@ export default function App() {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        // Append each token to the AI message
         setMessages((prev) =>
           prev.map((m, i) =>
             i === aiMsgIndex ? { ...m, text: m.text + chunk } : m
@@ -254,7 +242,6 @@ export default function App() {
         );
       }
     } catch (err) {
-      // Replace placeholder with error
       setMessages((prev) =>
         prev.map((m, i) =>
           i === aiMsgIndex
@@ -333,7 +320,6 @@ export default function App() {
     }
   };
 
-  // Drag-and-drop
   const onDragOver  = useCallback((e) => { e.preventDefault(); setIsDragging(true); }, []);
   const onDragLeave = useCallback(() => setIsDragging(false), []);
   const onDrop      = useCallback((e) => {
@@ -346,16 +332,27 @@ export default function App() {
   return (
     <div className="app">
 
-      {/* ── Sidebar ──────────────────────────────────────────────── */}
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">🤖</div>
-          <div><h1>Arch AI</h1></div>
-        </div>
+      {/* ── Sidebar with Collapse ────────────────────────────────── */}
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        {/* Toggle Button */}
+        <button 
+          className="sidebar-toggle" 
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {sidebarCollapsed ? '»' : '«'}
+        </button>
+
+        {/* Sidebar Content Wrapper */}
+        <div className="sidebar-content">
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-icon">🧠</div>
+            <div><h1>Arch AI</h1></div>
+          </div>
 
         {/* ── AUTH PANEL ── */}
         {!user ? (
-          /* Not logged in — show login/signup form */
           <div className={`auth-panel ${isMorphing ? 'morphing-out' : ''}`}>
             <p className="sidebar-title">
               {authMode === "login" ? "Login to upload Documents" : "Create an account"}
@@ -397,16 +394,14 @@ export default function App() {
 
             
             <p className="sidebar-hint">
-              📂 System supports PDFs and images kindly authenticate to use these features or just chat freely   
-              
+              📂 System supports PDFs and images. Authenticate to use these features or just chat freely.   
             </p>
             <p className="sidebar-hint">
               🔐 Files stay private and are securely deleted on logout.
             </p>
           </div>
         ) : (
-          /* Logged in — show user info + Document upload */
-          <>
+          <div className="kb-panel">  
             <div className="user-info">
               <span className="user-email" title={user.email}>👤 {user.email}</span>
               <button className="btn-logout" onClick={handleLogout} title="Logout clears all your uploaded documents">
@@ -416,7 +411,6 @@ export default function App() {
 
             <p className="sidebar-title">Knowledge Base</p>
 
-            {/* Drop zone */}
             <div
               className={`drop-zone ${isDragging ? "dragging" : ""} ${selectedFile ? "has-file" : ""}`}
               onDragOver={onDragOver}
@@ -474,8 +468,9 @@ export default function App() {
             )}
 
          <p className="sidebar-hint"> 🔐 At logout, your documents are securely deleted to protect your privacy. </p>
-          </>
+          </div>
         )}
+        </div>
       </aside>
 
       {/* ── Chat Main ────────────────────────────────────────────── */}

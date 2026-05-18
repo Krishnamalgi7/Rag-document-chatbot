@@ -78,14 +78,14 @@ async def get_current_user(authorization: str) -> str:
 
     token = authorization[7:]  # strip "Bearer "
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(
             f"{SUPABASE_URL}/auth/v1/user",
             headers={
                 "Authorization": f"Bearer {token}",
                 "apikey": SUPABASE_ANON_KEY,
             },
-            timeout=10.0,
+            timeout=15.0,
         )
 
     if resp.status_code != 200:
