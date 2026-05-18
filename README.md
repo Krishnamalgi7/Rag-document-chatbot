@@ -1,4 +1,4 @@
-# 🤖 Arch AI Chatbot — Enterprise-Grade Multi-Modal RAG Platform
+# 🤖 Arch AI Chatbot — Full-Stack Multi-Modal RAG System with Streaming & Semantic Retrieval
 
 A state-of-the-art, full-stack AI platform that empowers authenticated users to analyze non-structured data (PDFs, Scans, Images) using advanced Retrieval-Augmented Generation (RAG). Built securely with Supabase Auth, it features seamless multi-modal ingestion, automated data-table extraction, and dynamic session handovers.
 
