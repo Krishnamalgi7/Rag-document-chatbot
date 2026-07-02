@@ -135,31 +135,51 @@ Before your data is deleted, you get a summary you can copy or download.
 
 ### System architecture
 
-<img src="docs/diagrams/system-architecture.png" alt="System architecture diagram" width="280" />
+<p align="center">
+  <img src="docs/diagrams/system-architecture.png"
+       alt="System Architecture"
+       width="180">
+</p>
 
 The browser talks to a single FastAPI backend over a REST API. The backend fans out to three responsibilities: authentication (via Supabase Auth), the RAG engine (embedding and retrieval), and the document processor (OCR and PDF parsing). Retrieval runs through a sentence-transformer embedding model into PostgreSQL with the `pgvector` extension, and the top matching chunks are passed to Groq's Llama 3.3-70B, which streams its answer back to the browser.
 
 ### Authentication flow
 
-<img src="docs/diagrams/authentication-flow.png" alt="Authentication flow diagram" width="200" />
+<p align="center">
+  <img src="docs/diagrams/authentication-flow.png"
+       alt="Authentication Flow"
+       width="200">
+</p>
 
 Login and signup are handled by Supabase, which issues a JWT access token. The frontend holds onto that token for the session and attaches it to every authenticated request — uploading documents, chatting in RAG mode, and eventually logging out, which deletes the user's documents before the session ends.
 
 ### Document upload pipeline
 
-<img src="docs/diagrams/document-upload-pipeline.png" alt="Document upload pipeline diagram" width="250" />
+<p align="center">
+  <img src="docs/diagrams/document-upload-pipeline.png"
+       alt="Document Upload Pipeline"
+       width="250">
+</p>
 
 After a file is selected and posted to `/upload-document`, processing happens in the background so the request returns immediately. Text is extracted with `pdfplumber`, scanned pages go through OCR, and tables are pulled out separately before everything is combined, chunked, embedded, and stored in Postgres — after which the document is ready to be searched.
 
 ### RAG query flow
 
-<img src="docs/diagrams/rag-query-flow.png" alt="RAG query flow diagram" width="180" />
+<p align="center">
+  <img src="docs/diagrams/rag-query-flow.png"
+       alt="RAG Query Flow"
+       width="180">
+</p>
 
 A question is embedded with the same sentence-transformer model used at upload time, compared against stored vectors with `pgvector` similarity search, and the top candidates are re-ranked with a cross-encoder before the best context is handed to the LLM. The response streams back to the browser as it's generated.
 
 ### Database schema
 
-<img src="docs/diagrams/database-schema.png" alt="Database schema diagram" width="250" />
+<p align="center">
+  <img src="docs/diagrams/database-schema.png"
+       alt="Database Schema"
+       width="280">
+</p>
 
 Each user can own multiple uploaded documents and chat messages. The `documents` table stores extracted document content together with vector embeddings used during retrieval. All document data associated with a user is automatically deleted on logout to maintain session privacy.
 
@@ -320,6 +340,10 @@ Visit `http://localhost:8080`.
 
 ---
 
-## License
 
-MIT — see `LICENSE` for details.
+## Author
+
+**Krishna Sudhir Malgi**
+
+- GitHub: https://github.com/Krishnamalgi7
+- LinkedIn: https://www.linkedin.com/in/krishna-malgi/
