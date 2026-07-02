@@ -1,122 +1,211 @@
-# Kito AI — Ephemeral RAG Chatbot
+<div align="center">
 
-Kito AI is a full-stack chatbot that lets you upload a document — a PDF, a scan, or a photo of a page — and ask questions about it in plain language. It answers using the content of your document when it's relevant, and falls back to general knowledge when it isn't. Nothing you upload sticks around: as soon as you log out, your documents and their embeddings are deleted from the database.
+# Kito AI
 
-You can also use it without an account. Logged-out visitors get a normal chat experience powered by a general-purpose LLM; they just can't upload files or get answers grounded in a specific document.
+**An ephemeral, document-aware chatbot built on Retrieval-Augmented Generation.**
 
-This README covers what the project actually does, how the two halves (frontend and backend) fit together, and how to get it running locally.
+Upload a PDF or image, ask questions about it, and get grounded answers — or just chat without an account. Every document you upload is permanently deleted the moment you log out.
 
----
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%26%20DB-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Groq](https://img.shields.io/badge/Groq-Llama%203.3--70B-F55036)](https://groq.com/)
+[![License](https://img.shields.io/badge/License-MIT-lightgrey)](#license)
 
-## What it does
-
-- **Ask questions about your own documents.** Upload a PDF or an image, wait a few seconds while it's processed, and start asking questions. Answers are grounded in the text that was extracted from your file.
-- **Chat without an account.** No login required to talk to the model — you just won't get document-aware answers.
-- **Streams responses token by token**, so replies appear as they're generated instead of arriving all at once.
-- **Reads scanned documents and photos, not just clean PDFs.** Text-based PDFs are parsed directly; scanned pages and images go through OCR.
-- **Pulls tables out of PDFs**, not just paragraphs, so numeric or tabular data isn't lost during extraction.
-- **Tells you where an answer came from.** Each AI response is tagged as either "from your document" or "general AI knowledge," along with a rough confidence level when it's document-based.
-- **Deletes your data when you log out.** A confirmation screen shows a short summary of the session, then permanently removes your uploaded content from the database.
-- **Uploads run in the background.** You get an immediate response when you hit upload, and the UI polls for progress instead of holding the connection open while a large file is processed.
+</div>
 
 ---
 
-## How it's built
+## Table of contents
 
-### Frontend
-
-The frontend is plain HTML, CSS, and JavaScript — no build step, no framework, no bundler. Open `chat.html` in a browser (or serve it with any static file server) and it works.
-
-- `chat.html` — the entire application shell: sidebar, chat window, input area, and the logout summary modal.
-- `js/chat.js` — the main controller. Wires up the DOM, manages login/logout state, sends and renders messages.
-- `js/auth.js` — handles sign-up, login, and session state through Supabase Auth.
-- `js/upload.js` — drag-and-drop file handling, the upload request itself, and polling for processing status.
-- `js/modal.js` — the end-of-session summary dialog, including copy-to-clipboard and download-as-text.
-- `js/api.js` — every fetch call to the backend lives here.
-- `js/utils.js` — small shared helpers (auto-growing textarea, Markdown rendering).
-- `js/config.js` — the two things you're likely to change per environment: your Supabase project URL/key and the backend API base URL.
-- `css/style.css` — design tokens: colors, spacing, radii, fonts. Change a value here and it propagates everywhere.
-- `css/chat.css` — every component's actual styling, built on top of those tokens.
-
-Markdown rendering in the chat uses `marked.js`, loaded from a CDN. Authentication uses the Supabase JS SDK, also loaded from a CDN as an ES module.
-
-There's also a leftover `frontend/src/` folder with a Vite + React scaffold from an earlier version of the project. It isn't wired into `chat.html` and isn't part of the running app — the plain HTML/CSS/JS frontend described above is what's actually deployed.
-
-### Backend
-
-The backend is a FastAPI application.
-
-- `app/main.py` — the API routes, request/response models, and the Supabase JWT verification used to identify logged-in users.
-- `app/rag.py` — embeddings, chunking, vector search, re-ranking, and the calls out to the LLM.
-- `app/document_processor.py` — turns an uploaded PDF or image into clean text: text extraction, OCR, and table extraction.
-- `app/job_store.py` — an in-memory store that tracks the progress of background upload jobs so the frontend can poll for status.
-- `app/database.py` — the SQLAlchemy engine, pointed at a Postgres database with the `pgvector` extension enabled.
-- `app/config.py` — loads required environment variables and fails fast with a clear error if any are missing.
-
-**Retrieval pipeline, in short:** when a document is uploaded, its text is split into overlapping chunks (~500 tokens each, 50 tokens of overlap) and embedded with `sentence-transformers/all-MiniLM-L6-v2` (384-dimensional vectors). Those vectors are stored in Postgres via `pgvector`, tagged with the uploading user's ID.
-
-When a logged-in user sends a message, their query is expanded, the top candidate chunks are retrieved by vector similarity, and a cross-encoder re-ranks them before the best few are handed to the LLM as context. If nothing in the user's documents is close enough to be useful, the request quietly falls back to a general-knowledge answer instead of forcing a bad document match.
-
-**Model provider:** chat completions run on Groq (`llama-3.3-70b-versatile`), which is why responses stream back quickly.
-
-### Database
-
-Postgres, via Supabase, with the `pgvector` extension enabled for similarity search. One table (`documents`) stores each chunk's text, its embedding, and the ID of the user it belongs to.
-
-### Authentication
-
-Supabase Auth handles sign-up and login on the frontend. The backend doesn't talk to Supabase's auth system to issue tokens — it only verifies the token it's handed on each request by calling Supabase's `/auth/v1/user` endpoint, and uses the returned user ID to scope document storage, retrieval, and deletion to that one user.
+- [Overview](#overview)
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Architecture](#architecture)
+  - [System architecture](#system-architecture)
+  - [Authentication flow](#authentication-flow)
+  - [Document upload pipeline](#document-upload-pipeline)
+  - [RAG query flow](#rag-query-flow)
+  - [Database schema](#database-schema)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [API reference](#api-reference)
+- [Known limitations](#known-limitations)
+- [License](#license)
 
 ---
 
-## Project layout
+## Overview
+
+Kito AI is a full-stack RAG (Retrieval-Augmented Generation) chatbot. It's built around one idea: you should be able to hand it a document and get answers grounded in that document, without that document living on a server forever.
+
+- Anyone can chat with the assistant, no account required.
+- Signed-in users can upload a PDF or an image (including scanned pages) and ask questions about it specifically.
+- Every answer is labeled with where it came from — the uploaded document, or general model knowledge — so you always know how much to trust it.
+- Logging out deletes every document and embedding tied to that account. Nothing persists beyond the session.
+
+---
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%">
+
+**Home — public mode**
+<br/>
+<img src="docs/screenshots/01_home_page.png" alt="Home page in public mode" width="100%" />
+<br/>
+No account needed to start chatting. Signing in unlocks document search.
+
+</td>
+<td width="50%">
+
+**Signed in — document search ready**
+<br/>
+<img src="docs/screenshots/02_rag_mode_enabled.png" alt="RAG mode enabled after login" width="100%" />
+<br/>
+Once logged in, the sidebar switches to the upload panel.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**A grounded answer**
+<br/>
+<img src="docs/screenshots/03_document_response.png" alt="Chat response sourced from an uploaded document" width="100%" />
+<br/>
+Responses are tagged "From documents" when they're grounded in what you uploaded.
+
+</td>
+<td width="50%">
+
+**End-of-session summary**
+<br/>
+<img src="docs/screenshots/04_session_summary.png" alt="Session summary modal shown before logout" width="100%" />
+<br/>
+Before your data is deleted, you get a summary you can copy or download.
+
+</td>
+</tr>
+</table>
+
+---
+
+## Features
+
+| Feature | Description |
+|---|---|
+| Public chat | Talk to the assistant with no account — general-knowledge answers only. |
+| Document-grounded chat | Sign in, upload a document, and get answers sourced from its content. |
+| OCR support | Scanned PDFs and photographed pages are read via OCR, not just parsed text. |
+| Table extraction | Tabular data inside PDFs is extracted, not flattened into unreadable text. |
+| Streaming responses | Answers stream back token by token instead of arriving all at once. |
+| Source transparency | Every AI reply is labeled as document-grounded or general knowledge. |
+| Background uploads | Uploads return immediately; processing progress is polled and shown live. |
+| Ephemeral by design | Logging out permanently deletes all of that user's documents and embeddings. |
+| Session summary | A short recap of the conversation is generated right before logout. |
+
+---
+
+## Architecture
+
+### System architecture
+
+<img src="docs/diagrams/system-architecture.png" alt="System architecture diagram" width="640" />
+
+The browser talks to a single FastAPI backend over a REST API. The backend fans out to three responsibilities: authentication (via Supabase Auth), the RAG engine (embedding and retrieval), and the document processor (OCR and PDF parsing). Retrieval runs through a sentence-transformer embedding model into PostgreSQL with the `pgvector` extension, and the top matching chunks are passed to Groq's Llama 3.3-70B, which streams its answer back to the browser.
+
+### Authentication flow
+
+<img src="docs/diagrams/authentication-flow.png" alt="Authentication flow diagram" width="360" />
+
+Login and signup are handled by Supabase, which issues a JWT access token. The frontend holds onto that token for the session and attaches it to every authenticated request — uploading documents, chatting in RAG mode, and eventually logging out, which deletes the user's documents before the session ends.
+
+### Document upload pipeline
+
+<img src="docs/diagrams/document-upload-pipeline.png" alt="Document upload pipeline diagram" width="360" />
+
+After a file is selected and posted to `/upload-document`, processing happens in the background so the request returns immediately. Text is extracted with `pdfplumber`, scanned pages go through OCR, and tables are pulled out separately before everything is combined, chunked, embedded, and stored in Postgres — after which the document is ready to be searched.
+
+### RAG query flow
+
+<img src="docs/diagrams/rag-query-flow.png" alt="RAG query flow diagram" width="360" />
+
+A question is embedded with the same sentence-transformer model used at upload time, compared against stored vectors with `pgvector` similarity search, and the top candidates are re-ranked with a cross-encoder before the best context is handed to the LLM. The response streams back to the browser as it's generated.
+
+### Database schema
+
+<img src="docs/diagrams/database-schema.png" alt="Database schema diagram" width="520" />
+
+Each user can own many documents (their extracted content and embeddings) and, per the data model, many chat messages. In the current implementation, the `documents` table — content, embedding, and the owning `user_id` — is what actually backs retrieval; it's cleared entirely on logout.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | HTML, CSS, vanilla JavaScript (no build step) |
+| Backend | FastAPI (Python) |
+| Database | PostgreSQL + `pgvector`, hosted on Supabase |
+| Authentication | Supabase Auth (JWT) |
+| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` |
+| Re-ranking | Cross-encoder re-ranker over top retrieved chunks |
+| LLM | Groq — Llama 3.3-70B (streaming) |
+| Document parsing | `pdfplumber`, OCR, table extraction |
+| Deployment | Render (see `render.yaml`) |
+
+---
+
+## Project structure
 
 ```
-Rag-document-chatbot/
+Kito AI/
 ├── backend/
-│   ├── app/
-│   │   ├── main.py               FastAPI routes and auth verification
-│   │   ├── rag.py                Chunking, embeddings, retrieval, LLM calls
-│   │   ├── document_processor.py PDF/image text and table extraction, OCR
-│   │   ├── job_store.py          Background upload job tracking
-│   │   ├── database.py           SQLAlchemy engine setup
-│   │   └── config.py             Environment variable loading
-│   ├── requirements.txt
-│   └── .env                      Not committed — see setup below
+│   ├── app/                        FastAPI application code
+│   ├── .env                        Environment variables (not committed)
+│   └── requirements.txt
+├── docs/
+│   ├── diagrams/
+│   │   ├── system-architecture.png
+│   │   ├── authentication-flow.png
+│   │   ├── document-upload-pipeline.png
+│   │   ├── rag-query-flow.png
+│   │   └── database-schema.png
+│   └── screenshots/
+│       ├── 01_home_page.png
+│       ├── 02_rag_mode_enabled.png
+│       ├── 03_document_response.png
+│       └── 04_session_summary.png
 ├── frontend/
-│   ├── index.html                Redirects to chat.html
-│   ├── chat.html                 The actual application
+│   ├── chat.html                   The application shell
+│   ├── index.html                  Redirects to chat.html
 │   ├── css/
-│   │   ├── style.css             Design tokens
-│   │   └── chat.css              Component styles
-│   ├── js/
-│   │   ├── chat.js
-│   │   ├── auth.js
-│   │   ├── upload.js
-│   │   ├── modal.js
-│   │   ├── api.js
-│   │   ├── utils.js
-│   │   └── config.js             Supabase + backend URL configuration
-│   └── src/                      Unused Vite/React scaffold from an earlier iteration
-├── render.yaml                   Deployment config for Render
+│   └── js/
+├── venv/
+├── .gitignore
+├── render.yaml
 └── README.md
 ```
 
 ---
 
-## Running it locally
+## Getting started
 
 ### Prerequisites
 
 - Python 3.11+
 - A Supabase project with the `pgvector` extension enabled
 - A Groq API key
-- Tesseract OCR installed and on your system PATH (needed to read scanned documents and images)
-- Poppler installed and on your system PATH (needed to convert PDF pages to images for OCR)
+- Tesseract OCR and Poppler installed and on your system PATH
 
 ### 1. Set up the database
 
-In the Supabase SQL editor, run once:
+Run once in the Supabase SQL editor:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -142,8 +231,6 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-All four are required — the app checks for them at startup and will refuse to boot if any are missing.
-
 ### 3. Install and run the backend
 
 ```bash
@@ -154,22 +241,44 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://127.0.0.1:8000`.
+The API is now available at `http://127.0.0.1:8000`.
 
-### 4. Configure the frontend
+### 4. Configure and serve the frontend
 
-Open `frontend/js/config.js` and set your own Supabase project URL, Supabase anon key, and backend API base URL. The anon key is a public, client-safe key — but it should still point at your own Supabase project rather than reusing whatever is checked into the repository.
-
-### 5. Serve the frontend
-
-No build step is needed. Any static file server works:
+Set your Supabase URL, Supabase anon key, and backend API base URL in `frontend/js/config.js`, then serve the folder with any static file server:
 
 ```bash
 cd frontend
 python -m http.server 8080
 ```
 
-Then visit `http://localhost:8080`.
+Visit `http://localhost:8080`.
 
 ---
 
+## API reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Health check |
+| `POST` | `/rag-chat` | Non-streaming chat completion |
+| `POST` | `/rag-chat/stream` | Streaming chat completion |
+| `POST` | `/api/session/summary` | Generates the end-of-session summary |
+| `POST` | `/upload-document` | Starts background processing of an uploaded file, returns a job ID |
+| `GET` | `/upload-document/status/{job_id}` | Polls the status of a background upload job |
+| `POST` | `/upload-pdf` | Legacy synchronous single-file upload |
+| `DELETE` | `/clear-user-documents` | Deletes all of the authenticated user's documents |
+
+---
+
+## Known limitations
+
+- Upload job status is stored in memory, so it doesn't survive a backend restart or scale across multiple instances without moving to shared storage such as Redis.
+- OCR and table extraction depend on Tesseract and Poppler being installed on the host — they aren't pulled in automatically by `pip install`.
+- CORS is currently open to all origins for ease of local development; restrict this before deploying publicly.
+
+---
+
+## License
+
+MIT — see `LICENSE` for details.
