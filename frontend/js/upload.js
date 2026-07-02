@@ -37,7 +37,7 @@
    chat.html    — #progress-bar-container, #progress-bar-fill, etc.
    ========================================================= */
 
-import { uploadDocumentToServer, pollUploadStatus } from "./api.js";
+import { uploadDocumentToServer, pollUploadStatus } from "./api.js?v=2";
 
 
 // ── Constants ─────────────────────────────────────────────
@@ -173,6 +173,24 @@ export function handleFileSelection(file, elements) {
 }
 
 
+// ── setSessionStatus ─────────────────────────────────────
+//
+// Updates the "Document Search" status indicator in the sidebar.
+//   active  true  → green dot, custom text
+//   active  false → grey dot, "No document uploaded"
+//
+function setSessionStatus(elements, active, text) {
+  const { sessionDot, sessionStatus } = elements;
+  if (!sessionDot || !sessionStatus) return; // guard if not passed in
+  if (active) {
+    sessionDot.classList.add("active");
+  } else {
+    sessionDot.classList.remove("active");
+  }
+  sessionStatus.textContent = text;
+}
+
+
 // ── handleUpload ──────────────────────────────────────────
 //
 // WHAT IT DOES:
@@ -200,6 +218,9 @@ async function handleUpload(accessToken, elements) {
   // Disable the button and show uploading state
   btnUpload.disabled    = true;
   btnUpload.textContent = "Uploading…";
+
+  // Show "Processing…" in the session status indicator
+  setSessionStatus(elements, false, "Processing…");
 
   // Hide any previous feedback/progress bar
   hideUploadFeedback(uploadFeedback);
@@ -301,6 +322,11 @@ function _handleStatusUpdate(statusData, elements) {
     const timeInfo  = (result.timings && result.timings.total_s)
       ? ` in ${result.timings.total_s.toFixed(1)}s`
       : "";
+    const filename  = result.filename || null;
+
+    // Update the session status indicator — green dot + filename or generic label
+    const statusLabel = filename ? `${filename} ready` : "1 document ready";
+    setSessionStatus(elements, true, statusLabel);
 
     // Hide the progress bar and show the green success message
     hideProgressBar(elements);
@@ -323,6 +349,9 @@ function _handleStatusUpdate(statusData, elements) {
   if (status === "error") {
     _stopPolling();
     hideProgressBar(elements);
+
+    // Reset status indicator since no document was loaded
+    setSessionStatus(elements, false, "No document uploaded");
 
     const errorDetail = statusData.error || "Unknown error during processing.";
     showUploadFeedback(

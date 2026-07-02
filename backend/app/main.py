@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Arch Knowledge Chatbot API", version="4.0.0")
+app = FastAPI(title="Kito AI Chatbot API", version="4.0.0")
 
 # ---------------------------------------------------------------------------
 # CORS
@@ -442,7 +442,7 @@ def root():
     logger.info("Health check hit.")
     return {
         "status"  : "ok",
-        "message" : "Arch Knowledge Chatbot API is running 🚀",
+        "message" : "Kito AI Chatbot API is running 🚀",
         "version" : "4.0.0",
         "upload"  : "async — returns job_id immediately",
         "features": {
@@ -694,7 +694,7 @@ async def upload_document(
         tmp_file = tempfile.NamedTemporaryFile(
             suffix  = suffix,
             delete  = False,   # We delete manually in the background task
-            prefix  = "archai_upload_",
+            prefix  = "kito_ai_upload_",
         )
         tmp_file.write(file_bytes)
         tmp_file.close()

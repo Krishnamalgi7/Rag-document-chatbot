@@ -27,9 +27,9 @@
       Clipboard copy uses the browser's Clipboard API."
    ========================================================= */
 
-import { fetchSessionSummary, clearUserDocuments } from "./api.js";
-import { signOutUser } from "./auth.js";
-import { renderMarkdown } from "./utils.js";
+import { fetchSessionSummary, clearUserDocuments } from "./api.js?v=2";
+import { signOutUser } from "./auth.js?v=2";
+import { renderMarkdown } from "./utils.js?v=2";
 
 
 // ── Module-level variables ─────────────────────────────────

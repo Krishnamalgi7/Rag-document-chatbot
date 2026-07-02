@@ -1,6 +1,6 @@
-# Arch Knowledge — Ephemeral RAG Chatbot
+# Kito AI — Ephemeral RAG Chatbot
 
-Arch AI is a full-stack chatbot that lets you upload a document — a PDF, a scan, or a photo of a page — and ask questions about it in plain language. It answers using the content of your document when it's relevant, and falls back to general knowledge when it isn't. Nothing you upload sticks around: as soon as you log out, your documents and their embeddings are deleted from the database.
+Kito AI is a full-stack chatbot that lets you upload a document — a PDF, a scan, or a photo of a page — and ask questions about it in plain language. It answers using the content of your document when it's relevant, and falls back to general knowledge when it isn't. Nothing you upload sticks around: as soon as you log out, your documents and their embeddings are deleted from the database.
 
 You can also use it without an account. Logged-out visitors get a normal chat experience powered by a general-purpose LLM; they just can't upload files or get answers grounded in a specific document.
 

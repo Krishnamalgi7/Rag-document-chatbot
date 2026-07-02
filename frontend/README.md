@@ -1,6 +1,6 @@
-# Arch Knowledge — Frontend Documentation
+# Kito AI — Frontend Documentation
 
-> **A plain HTML + CSS + Vanilla JavaScript frontend for the Arch Knowledge chatbot.**
+> **A plain HTML + CSS + Vanilla JavaScript frontend for the Kito AI chatbot.**
 > No React. No build step. No npm. Just open `chat.html` in a browser.
 
 ---

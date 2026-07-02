@@ -2,28 +2,20 @@
 <html lang="en">
 
 <head>
-  <!--
-    chat.html — MAIN APPLICATION
-    ============================================================
-    Redesigned: no emojis, Lucide icons, Knowledge Session panel.
-    All element IDs and classes identical to original — zero JS logic changes.
-    ============================================================
-  -->
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arch Knowledge — Document-aware AI assistant</title>
+  <title>Kito AI — Document-aware AI assistant</title>
   <meta name="description"
-    content="Arch Knowledge is a session-based RAG assistant. Upload a document, ask questions. All context is cleared on logout." />
+    content="Kito AI is a session-based RAG assistant. Upload a document, ask questions. All context is cleared on logout." />
 
-  <!-- Favicon: blue square with "A" -->
+  <!-- Favicon -->
   <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%232563EB'/><text y='.84em' x='18' font-size='64' font-family='Inter,sans-serif' font-weight='700' fill='white'>A</text></svg>" />
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%231F2937'/></svg>" />
 
   <!-- Design system tokens (must load before chat.css) -->
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=3" />
   <!-- Component styles -->
-  <link rel="stylesheet" href="css/chat.css" />
+  <link rel="stylesheet" href="css/chat.css?v=3" />
 
   <!-- marked.js: Markdown → HTML for AI responses -->
   <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
@@ -53,15 +45,10 @@
 
       <div class="sidebar-content" id="sidebar-content">
 
-        <!-- Identity bar -->
         <div class="sidebar-logo">
-          <div class="sidebar-logo-icon" aria-hidden="true">A</div>
-          <h1>Arch Knowledge</h1>
+          <h1>Kito AI</h1>
         </div>
 
-        <!-- ==========================================
-             AUTH PANEL (shown when logged out)
-             ========================================== -->
         <div class="auth-panel" id="auth-panel" style="display: flex; flex-direction: column; gap: 0;">
 
           <div class="auth-form-section">
@@ -89,15 +76,10 @@
           </p>
 
         </div>
-        <!-- end #auth-panel -->
 
-
-        <!-- ==========================================
-             KNOWLEDGE SESSION PANEL (shown when logged in)
-             ========================================== -->
         <div class="kb-panel" id="kb-panel" style="display: none;">
 
-          <!-- User row -->
+
           <div class="user-info">
             <span class="user-email" id="user-email" title=""></span>
             <button class="btn-logout" id="btn-logout" title="Sign out and clear session">
@@ -106,24 +88,23 @@
             </button>
           </div>
 
-          <!-- Session status -->
+
           <div class="session-section">
-            <p class="sidebar-title">Knowledge Session</p>
+            <p class="sidebar-title">Document Search</p>
             <div class="session-status-row">
               <span class="session-dot" id="session-dot"></span>
               <span class="session-status-text" id="session-status-text">No context loaded</span>
             </div>
           </div>
 
-          <!-- Upload area -->
+
           <div class="upload-section">
 
-            <!-- Drop zone -->
             <div class="drop-zone" id="drop-zone" role="button" aria-label="File upload — click or drag a PDF or image">
               <input type="file" id="file-input" accept=".pdf,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
                 style="display: none;" aria-hidden="true" />
 
-              <!-- Default placeholder — overwritten by upload.js -->
+
               <div class="drop-zone-placeholder">
                 <div class="drop-icon">
                   <i data-lucide="upload-cloud"></i>
@@ -133,37 +114,30 @@
               </div>
             </div>
 
-            <!-- Upload action -->
+
             <button class="btn-upload" id="btn-upload" disabled>
               Upload to session
             </button>
 
-            <!-- Async feedback and progress (shown by upload.js) -->
+
             <div class="upload-feedback" id="upload-feedback" style="display: none;" role="status"></div>
 
           </div>
-          <!-- end .upload-section -->
 
-          <!-- Session note — stays at bottom via CSS margin-top:auto -->
           <p class="sidebar-hint">
             Context is cleared on sign out.
           </p>
 
         </div>
-        <!-- end #kb-panel -->
+
 
       </div>
-      <!-- end #sidebar-content -->
+
 
     </aside>
 
-
-    <!-- ==============================================
-         CHAT MAIN
-         ============================================== -->
     <main class="chat-main" role="main">
 
-      <!-- Header -->
       <header class="chat-header">
         <div class="chat-header-dot" aria-hidden="true"></div>
         <h2>Ephemeral AI — RAG</h2>
@@ -171,10 +145,9 @@
       </header>
 
 
-      <!-- Messages -->
       <div class="chat-messages" id="chat-messages" role="log" aria-label="Conversation" aria-live="polite">
 
-        <!-- Empty state -->
+
         <div class="chat-empty" id="chat-empty">
           <div class="chat-empty-icon">
             <i data-lucide="message-square"></i>
@@ -185,12 +158,8 @@
           </p>
         </div>
 
-        <!-- Message bubbles injected here by chat.js -->
-
       </div>
 
-
-      <!-- Input area -->
       <div class="chat-input-area">
 
         <div class="chat-input-row">
@@ -210,10 +179,6 @@
 
     </main>
 
-
-    <!-- ==============================================
-         SESSION SUMMARY MODAL
-         ============================================== -->
     <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal-content">
 
@@ -225,7 +190,7 @@
 
         <div class="modal-body">
           <div id="summary-container">
-            <!-- Filled by modal.js: loading spinner or rendered Markdown -->
+
           </div>
         </div>
 
@@ -250,12 +215,9 @@
     </div>
 
   </div>
-  <!-- end .app -->
 
-  <!-- App entry point (ES module — deferred automatically) -->
-  <script type="module" src="js/chat.js"></script>
+  <script type="module" src="js/chat.js?v=2"></script>
 
-  <!-- Initialise Lucide icons for all static data-lucide elements -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       if (window.lucide) { lucide.createIcons(); }

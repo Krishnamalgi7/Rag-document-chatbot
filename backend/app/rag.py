@@ -9,38 +9,27 @@ from app.database import engine
 from app.config import GROQ_API_KEY
 from groq import Groq
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
+
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-EMBEDDING_MODEL      = "all-MiniLM-L6-v2"                       # dim = 384
-RERANKER_MODEL       = "cross-encoder/ms-marco-MiniLM-L-6-v2"   # re-ranking model
+EMBEDDING_MODEL      = "all-MiniLM-L6-v2"                       
+RERANKER_MODEL       = "cross-encoder/ms-marco-MiniLM-L-6-v2"  
 GROQ_MODEL           = "llama-3.3-70b-versatile"
-SIMILARITY_THRESHOLD = 0.7               # cosine DISTANCE cutoff (0-2, lower = more similar)
-SOFT_THRESHOLD       = 0.9               # relaxed threshold for soft retry
-TOP_K                = 5                 # chunks retrieved before re-ranking
-FINAL_TOP_K          = 3                 # chunks passed to Groq after re-ranking
-CHUNK_SIZE           = 500               # target tokens per chunk
-CHUNK_OVERLAP        = 50                # overlap tokens between chunks
-MAX_HISTORY_MESSAGES = 20                # cap for session summary
-CHAT_HISTORY_WINDOW  = 6                 # recent messages injected into Groq context
-GROQ_MAX_RETRIES     = 3                 # retry attempts on Groq API failure
+SIMILARITY_THRESHOLD = 0.7              
+SOFT_THRESHOLD       = 0.9               
+TOP_K                = 5                 
+FINAL_TOP_K          = 3                 
+CHUNK_SIZE           = 500               
+CHUNK_OVERLAP        = 50                
+MAX_HISTORY_MESSAGES = 20                
+CHAT_HISTORY_WINDOW  = 6                 
+GROQ_MAX_RETRIES     = 3                 
 
-# ---------------------------------------------------------------------------
-# Models & Groq client — loaded once at import time
-# ---------------------------------------------------------------------------
+
 embedding_model = SentenceTransformer(EMBEDDING_MODEL)
 reranker_model  = CrossEncoder(RERANKER_MODEL)
 groq_client     = Groq(api_key=GROQ_API_KEY)
 
-
-# ===========================================================================
-# 1. OCR QUALITY PREPROCESSING
-# ===========================================================================
 
 def clean_ocr_text(raw_text: str) -> str:
     """
@@ -54,18 +43,14 @@ def clean_ocr_text(raw_text: str) -> str:
       - Hyphenated line breaks  (e.g. rec-\\nord → record)
       - Lines that break mid-sentence
     """
-    raw_text = re.sub(r'\n{3,}', '\n\n', raw_text)         # collapse excessive blank lines
-    raw_text = re.sub(r'[^\x00-\x7F]+', ' ', raw_text)     # remove non-ASCII noise
-    raw_text = re.sub(r'\s{2,}', ' ', raw_text)             # collapse multiple spaces
-    raw_text = re.sub(r'(\w)-\n(\w)', r'\1\2', raw_text)    # fix hyphenated line breaks
-    raw_text = re.sub(r'\n([a-z])', r' \1', raw_text)       # join mid-sentence line breaks
+    raw_text = re.sub(r'\n{3,}', '\n\n', raw_text)         
+    raw_text = re.sub(r'[^\x00-\x7F]+', ' ', raw_text)     
+    raw_text = re.sub(r'\s{2,}', ' ', raw_text)            
+    raw_text = re.sub(r'(\w)-\n(\w)', r'\1\2', raw_text)    
+    raw_text = re.sub(r'\n([a-z])', r' \1', raw_text)       
     logger.info("OCR text cleaned. Length: %d chars.", len(raw_text))
     return raw_text.strip()
 
-
-# ===========================================================================
-# 2. TEXT CHUNKING
-# ===========================================================================
 
 def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
     """
@@ -94,18 +79,10 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
     return chunks
 
 
-# ===========================================================================
-# 3. EMBEDDING HELPERS
-# ===========================================================================
-
 def generate_embedding(text_content: str) -> list[float]:
     """Return a 384-dim embedding vector for the given text."""
     return embedding_model.encode(text_content).tolist()
 
-
-# ===========================================================================
-# 4. GROQ CALL WITH RETRY + EXPONENTIAL BACKOFF
-# ===========================================================================
 
 def _call_groq_with_retry(messages: list[dict], temperature: float = 0.3) -> str:
     """
@@ -133,10 +110,6 @@ def _call_groq_with_retry(messages: list[dict], temperature: float = 0.3) -> str
             time.sleep(wait)
 
 
-# ===========================================================================
-# 5. DOCUMENT STORAGE  (unchanged — works with existing schema)
-# ===========================================================================
-
 def store_document(content: str, user_id: str) -> None:
     """Embed and persist a single document chunk with its owner user_id."""
     logger.info("Storing chunk (%d chars) for user_id=%s", len(content), user_id)
@@ -160,7 +133,7 @@ def store_document(content: str, user_id: str) -> None:
 def store_chunks(
     chunks: list[str],
     user_id: str,
-    on_progress=None,          # optional callable(chunks_done: int, total: int)
+    on_progress=None,        
 ) -> int:
     """
     Embed and persist multiple chunks. Returns count stored.
@@ -182,7 +155,7 @@ def store_chunks(
     document-processing pipeline is CPU/IO-bound synchronous code. The
     BackgroundTask wrapper runs it in a thread, so sync is correct here.
     """
-    # Count only non-empty chunks so the progress denominator is accurate
+    
     non_empty = [c for c in chunks if c.strip()]
     total      = len(non_empty)
     stored     = 0
@@ -191,12 +164,11 @@ def store_chunks(
         logger.info("Storing chunk %d/%d…", i + 1, total)
         store_document(chunk, user_id)
         stored += 1
-        # Report progress after each chunk so the frontend progress bar moves
+        
         if on_progress is not None:
             try:
                 on_progress(stored, total)
             except Exception as cb_exc:
-                # Never let a progress callback crash the actual storage loop
                 logger.warning(
                     "on_progress callback raised an exception (ignored): %s",
                     cb_exc,
@@ -204,11 +176,6 @@ def store_chunks(
 
     logger.info("Stored %d chunk(s) for user_id=%s.", stored, user_id)
     return stored
-
-
-# ===========================================================================
-# 6. DOCUMENT DELETION  (unchanged)
-# ===========================================================================
 
 def delete_user_documents(user_id: str) -> int:
     """Delete ALL documents for user_id. Returns rows deleted."""
@@ -226,11 +193,6 @@ def delete_user_documents(user_id: str) -> int:
     except Exception as exc:
         logger.error("Failed to delete documents for user_id=%s: %s", user_id, exc)
         raise
-
-
-# ===========================================================================
-# 7. QUERY EXPANSION
-# ===========================================================================
 
 def expand_query(user_message: str) -> str:
     """
@@ -261,12 +223,7 @@ def expand_query(user_message: str) -> str:
         return expanded
     except Exception as exc:
         logger.warning("Query expansion failed, using original: %s", exc)
-        return user_message   # graceful fallback
-
-
-# ===========================================================================
-# 8. RE-RANKING
-# ===========================================================================
+        return user_message   
 
 def rerank_chunks(query: str, chunks: list[str]) -> list[str]:
     """
@@ -292,10 +249,6 @@ def rerank_chunks(query: str, chunks: list[str]) -> list[str]:
         return chunks[:FINAL_TOP_K]
 
 
-# ===========================================================================
-# 9. HYBRID SEARCH (vector + full-text) WITH SOFT RETRY
-# ===========================================================================
-
 def search_similar(query: str, user_id: str) -> tuple[list[str], float]:
     """
     Hybrid search: pgvector cosine similarity + PostgreSQL full-text search.
@@ -320,7 +273,6 @@ def search_similar(query: str, user_id: str) -> tuple[list[str], float]:
     logger.info("Hybrid search | user=%s | query=%r", user_id, query[:80])
     query_embedding = generate_embedding(query)
 
-    # Sanitize query for PostgreSQL full-text search
     fts_query = re.sub(r'[^\w\s]', '', query).strip()
     fts_query = ' & '.join(fts_query.split()) if fts_query else query
 
@@ -386,10 +338,10 @@ def search_similar(query: str, user_id: str) -> tuple[list[str], float]:
                     },
                 ).fetchall()
 
-    # Strict threshold search
+
     rows = _run_search(SIMILARITY_THRESHOLD, TOP_K)
 
-    # Soft retry if nothing found
+
     if not rows:
         logger.info(
             "No chunks at strict threshold %.2f — soft retry at %.2f…",
@@ -401,7 +353,7 @@ def search_similar(query: str, user_id: str) -> tuple[list[str], float]:
 
     if not rows:
         logger.info("No relevant chunks found for user=%s.", user_id)
-        return [], 1.0   # avg_distance 1.0 signals no results
+        return [], 1.0   
 
     chunks       = [row[0] for row in rows]
     distances    = [row[1] for row in rows]
@@ -412,11 +364,6 @@ def search_similar(query: str, user_id: str) -> tuple[list[str], float]:
         len(chunks), avg_distance, user_id,
     )
     return chunks, avg_distance
-
-
-# ===========================================================================
-# 10. CONFIDENCE SCORE
-# ===========================================================================
 
 def compute_confidence(avg_distance: float) -> str:
     """
@@ -436,11 +383,6 @@ def compute_confidence(avg_distance: float) -> str:
         return "Low"
     else:
         return "Very Low"
-
-
-# ===========================================================================
-# 11. CHAT HISTORY INJECTION HELPER
-# ===========================================================================
 
 def _build_messages_with_history(
     system_prompt : str,
@@ -465,11 +407,6 @@ def _build_messages_with_history(
 
     messages.append({"role": "user", "content": user_message})
     return messages
-
-
-# ===========================================================================
-# 12. GROQ RESPONSE GENERATORS
-# ===========================================================================
 
 def _rag_response(
     context_docs : list[str],
@@ -564,11 +501,6 @@ def _fallback_response(
     messages = _build_messages_with_history(system_prompt, user_message, chat_history)
     return _call_groq_with_retry(messages, temperature=0.6)
 
-
-# ===========================================================================
-# 13. STREAMING RESPONSE
-# ===========================================================================
-
 async def stream_rag_response(
     context_docs : list[str],
     user_message : str,
@@ -597,8 +529,6 @@ async def stream_rag_response(
     is_rag       = bool(context_docs)
     context_text = "\n\n---\n\n".join(context_docs) if is_rag else ""
 
-    # The streaming prompt must be as complete as the non-streaming prompts above.
-    # A stub prompt here was the main cause of low-quality streamed answers.
     if is_rag:
         system_prompt = (
             "You are a knowledgeable AI assistant answering questions based on a user's uploaded document.\n\n"
@@ -689,11 +619,6 @@ async def stream_rag_response(
         logger.error("Streaming failed: %s", exc)
         yield "\n\nStreaming error. Please try again."
 
-
-# ===========================================================================
-# 14. PUBLIC ENTRY POINT  (fully backward compatible)
-# ===========================================================================
-
 def process_chat(
     user_message : str,
     user_id      : str | None        = None,
@@ -722,7 +647,7 @@ def process_chat(
     chat_history format (each item):
         {"role": "user" | "assistant", "text": "...", "mode": "rag" | "fallback"}
     """
-    # ── Public / unauthenticated ────────────────────────────────────────────
+    
     if user_id is None:
         logger.info("Mode: FALLBACK (public).")
         return {
@@ -732,20 +657,17 @@ def process_chat(
             "source"     : "🤖 Answered from general AI knowledge",
         }
 
-    # ── Step 1: Expand query ────────────────────────────────────────────────
     expanded_query = expand_query(user_message)
-
-    # ── Step 2: Hybrid search ───────────────────────────────────────────────
     context_docs, avg_distance = search_similar(expanded_query, user_id)
 
-    # ── Step 3: Re-rank ─────────────────────────────────────────────────────
+    
     if context_docs:
         context_docs = rerank_chunks(expanded_query, context_docs)
 
-    # ── Step 4: Confidence score ────────────────────────────────────────────
+   
     confidence = compute_confidence(avg_distance) if context_docs else "N/A"
 
-    # ── Step 5: RAG or fallback ─────────────────────────────────────────────
+    
     if context_docs:
         logger.info(
             "Mode: RAG | chunks=%d | confidence=%s | user=%s",
@@ -766,10 +688,6 @@ def process_chat(
         "source"     : "🤖 Answered from general AI knowledge",
     }
 
-
-# ===========================================================================
-# 15. SESSION SUMMARIZATION
-# ===========================================================================
 
 def generate_session_summary(chat_history: list[dict]) -> str:
     """

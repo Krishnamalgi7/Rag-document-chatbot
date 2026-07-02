@@ -27,11 +27,11 @@
    ========================================================= */
 
 import { initSupabase, loginUser, signupUser, getCurrentSession, onAuthChange }
-  from "./auth.js";
-import { initUpload }          from "./upload.js";
-import { initModal, openLogoutModal } from "./modal.js";
-import { streamChatMessage }   from "./api.js";
-import { autoGrow, renderMarkdown } from "./utils.js";
+  from "./auth.js?v=2";
+import { initUpload }          from "./upload.js?v=2";
+import { initModal, openLogoutModal } from "./modal.js?v=2";
+import { streamChatMessage }   from "./api.js?v=2";
+import { autoGrow, renderMarkdown } from "./utils.js?v=2";
 
 
 // ── Application State ─────────────────────────────────────
@@ -78,6 +78,10 @@ const elements = {
   fileInput:          document.getElementById("file-input"),
   btnUpload:          document.getElementById("btn-upload"),
   uploadFeedback:     document.getElementById("upload-feedback"),
+
+  // Session status indicator
+  sessionDot:         document.getElementById("session-dot"),
+  sessionStatus:      document.getElementById("session-status-text"),
 
   // Chat area elements
   publicBadge:        document.getElementById("public-badge"),
@@ -156,6 +160,8 @@ async function initApp() {
     fileInput:      elements.fileInput,
     btnUpload:      elements.btnUpload,
     uploadFeedback: elements.uploadFeedback,
+    sessionDot:     elements.sessionDot,
+    sessionStatus:  elements.sessionStatus,
     getAccessToken: function () {
       return currentSession ? currentSession.access_token : null;
     },
@@ -647,6 +653,10 @@ function showKBPanel() {
     elements.publicBadge.style.display = "none";
   }
 
+  // Reset session status to default (no document yet)
+  if (elements.sessionDot)    elements.sessionDot.classList.remove("active");
+  if (elements.sessionStatus) elements.sessionStatus.textContent = "No document uploaded";
+
   // Update placeholder and hint for logged-in mode
   elements.chatInput.placeholder    = "Ask a question about your documents… (Shift+Enter for newline)";
   elements.inputHint.textContent    = "Logged in · Private documents · Auto-deleted on logout";
@@ -672,6 +682,10 @@ function showAuthPanel() {
   if (elements.publicBadge) {
     elements.publicBadge.style.display = "";
   }
+
+  // Reset session status on logout
+  if (elements.sessionDot)    elements.sessionDot.classList.remove("active");
+  if (elements.sessionStatus) elements.sessionStatus.textContent = "No document uploaded";
 
   // Update placeholder and hint for guest mode
   elements.chatInput.placeholder    = "Ask anything…";
