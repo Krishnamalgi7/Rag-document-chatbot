@@ -138,7 +138,7 @@ Before your data is deleted, you get a summary you can copy or download.
 <p align="center">
   <img src="docs/diagrams/system-architecture.png"
        alt="System Architecture"
-       width="180">
+       width="250">
 </p>
 
 The browser talks to a single FastAPI backend over a REST API. The backend fans out to three responsibilities: authentication (via Supabase Auth), the RAG engine (embedding and retrieval), and the document processor (OCR and PDF parsing). Retrieval runs through a sentence-transformer embedding model into PostgreSQL with the `pgvector` extension, and the top matching chunks are passed to Groq's Llama 3.3-70B, which streams its answer back to the browser.
@@ -148,7 +148,7 @@ The browser talks to a single FastAPI backend over a REST API. The backend fans 
 <p align="center">
   <img src="docs/diagrams/authentication-flow.png"
        alt="Authentication Flow"
-       width="200">
+       width="150">
 </p>
 
 Login and signup are handled by Supabase, which issues a JWT access token. The frontend holds onto that token for the session and attaches it to every authenticated request — uploading documents, chatting in RAG mode, and eventually logging out, which deletes the user's documents before the session ends.
