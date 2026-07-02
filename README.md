@@ -141,7 +141,7 @@ The browser talks to a single FastAPI backend over a REST API. The backend fans 
 
 ### Authentication flow
 
-<img src="docs/diagrams/authentication-flow.png" alt="Authentication flow diagram" width="250" />
+<img src="docs/diagrams/authentication-flow.png" alt="Authentication flow diagram" width="200" />
 
 Login and signup are handled by Supabase, which issues a JWT access token. The frontend holds onto that token for the session and attaches it to every authenticated request — uploading documents, chatting in RAG mode, and eventually logging out, which deletes the user's documents before the session ends.
 
