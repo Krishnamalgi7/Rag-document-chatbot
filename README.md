@@ -135,7 +135,7 @@ Before your data is deleted, you get a summary you can copy or download.
 
 ### System architecture
 
-<img src="docs/diagrams/system-architecture.png" alt="System architecture diagram" width="250" />
+<img src="docs/diagrams/system-architecture.png" alt="System architecture diagram" width="280" />
 
 The browser talks to a single FastAPI backend over a REST API. The backend fans out to three responsibilities: authentication (via Supabase Auth), the RAG engine (embedding and retrieval), and the document processor (OCR and PDF parsing). Retrieval runs through a sentence-transformer embedding model into PostgreSQL with the `pgvector` extension, and the top matching chunks are passed to Groq's Llama 3.3-70B, which streams its answer back to the browser.
 
