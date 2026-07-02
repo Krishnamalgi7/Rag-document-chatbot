@@ -158,7 +158,7 @@ Login and signup are handled by Supabase, which issues a JWT access token. The f
 <p align="center">
   <img src="docs/diagrams/document-upload-pipeline.png"
        alt="Document Upload Pipeline"
-       width="250">
+       width="150">
 </p>
 
 After a file is selected and posted to `/upload-document`, processing happens in the background so the request returns immediately. Text is extracted with `pdfplumber`, scanned pages go through OCR, and tables are pulled out separately before everything is combined, chunked, embedded, and stored in Postgres — after which the document is ready to be searched.
@@ -178,7 +178,7 @@ A question is embedded with the same sentence-transformer model used at upload t
 <p align="center">
   <img src="docs/diagrams/database-schema.png"
        alt="Database Schema"
-       width="280">
+       width="350">
 </p>
 
 Each user can own multiple uploaded documents and chat messages. The `documents` table stores extracted document content together with vector embeddings used during retrieval. All document data associated with a user is automatically deleted on logout to maintain session privacy.
