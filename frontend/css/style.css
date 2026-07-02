@@ -1,0 +1,153 @@
+/* =========================================================
+   style.css — GLOBAL DESIGN SYSTEM
+   =========================================================
+   PURPOSE:
+     This file sets up the "design tokens" for the entire app.
+     Think of it as a central dictionary of colors, sizes, and
+     fonts. Every other CSS file references variables defined here.
+
+   WHY SEPARATE FROM chat.css?
+     Keeping global resets/variables in one file makes it easy
+     to restyle the whole app by editing a single place.
+   ========================================================= */
+
+/* ── Google Fonts ──────────────────────────────────────────
+   We import two fonts:
+   - DM Sans   → used for body text (clean, readable)
+   - Outfit    → used for headings (bold, modern)
+   Without this, the browser falls back to boring system fonts.
+   ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap');
+
+/* ── CSS Custom Properties (Variables) ─────────────────────
+   WHY USE VARIABLES?
+   Instead of writing the same hex color (#8b5cf6) in 50 places,
+   we define it once here and reference it everywhere as
+   var(--accent). If we ever want to change the accent color,
+   we only change it in ONE place.
+   ─────────────────────────────────────────────────────────── */
+:root {
+  /* ── Background Colors ── */
+  --bg-app:           #0a0412;               /* Deepest background — the base canvas */
+  --bg-sidebar:       rgba(15, 8, 25, 0.85); /* Sidebar — slightly translucent dark */
+  --bg-chat:          #0a0412;               /* Chat area — same as app bg */
+  --bg-surface:       rgba(25, 15, 40, 0.6); /* Card/surface backgrounds */
+  --bg-surface2:      rgba(35, 20, 55, 0.5); /* Secondary surfaces (code blocks) */
+  --bg-input:         rgba(25, 15, 40, 0.6); /* Input fields */
+  --bg-hover:         rgba(45, 25, 70, 0.5); /* Hover state */
+
+  /* ── Message Bubble Colors ── */
+  --bg-msg-user:      linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); /* User bubble: purple gradient */
+  --bg-msg-ai:        rgba(25, 15, 40, 0.7);                               /* AI bubble: dark glass */
+
+  /* ── Text Colors ── */
+  --text-primary:     #f5f3ff; /* Main text — near white with purple tint */
+  --text-secondary:   #c4b5fd; /* Muted text — light purple */
+  --text-muted:       #8b5cf6; /* Very muted — accent purple */
+  --text-on-user:     #ffffff; /* Text on user's purple bubble */
+  --text-code:        #e9d5ff; /* Code text inside code blocks */
+
+  /* ── Border Colors ── */
+  --border:           rgba(139, 92, 246, 0.15); /* Subtle border */
+  --border-light:     rgba(167, 139, 250, 0.25); /* Slightly visible border */
+
+  /* ── Accent / Brand Color ── */
+  --accent:           #8b5cf6; /* Purple — the main brand color */
+  --accent-hover:     #a78bfa; /* Lighter purple for hover states */
+  --accent-glow:      rgba(139, 92, 246, 0.5); /* Glow effect color */
+
+  /* ── Status Colors ── */
+  --success:          #34d399; /* Green — for success messages */
+  --success-bg:       rgba(52, 211, 153, 0.15);
+  --success-border:   rgba(52, 211, 153, 0.35);
+
+  --warning:          #fbbf24; /* Yellow — for warning/fallback badges */
+  --warning-bg:       rgba(251, 191, 36, 0.15);
+  --warning-border:   rgba(251, 191, 36, 0.35);
+
+  --error:            #f87171; /* Red — for error messages */
+  --error-bg:         rgba(248, 113, 113, 0.15);
+  --error-border:     rgba(248, 113, 113, 0.35);
+
+  /* ── Box Shadows ── */
+  --shadow-sm:        0 2px 10px rgba(0,0,0,0.5), 0 0 20px rgba(139,92,246,0.1);
+  --shadow-md:        0 8px 32px rgba(0,0,0,0.6), 0 0 40px rgba(139,92,246,0.15);
+  --shadow-lg:        0 20px 60px rgba(0,0,0,0.7), 0 0 60px rgba(139,92,246,0.2);
+  --shadow-accent:    0 0 40px rgba(139,92,246,0.5), 0 0 80px rgba(139,92,246,0.25);
+
+  /* ── Gradient ── */
+  --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 50%, #5b21b6 100%);
+
+  /* ── Border Radius ── */
+  --radius-sm:        10px;
+  --radius-md:        14px;
+  --radius-lg:        20px;
+  --radius-xl:        28px;
+
+  /* ── Sidebar widths ── */
+  --sidebar-width:     300px; /* Full sidebar width */
+  --sidebar-collapsed:  70px; /* Collapsed sidebar width */
+
+  /* ── Animation easing ── */
+  --transition:        0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Universal Reset ───────────────────────────────────────
+   WHY?
+   Different browsers apply different default margins/paddings
+   to elements. This reset removes all of them so we start
+   from a blank slate and style everything ourselves.
+   ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box; /* width includes padding and border */
+  margin: 0;
+  padding: 0;
+}
+
+/* Make the page fill the full viewport height and width */
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+/* ── Body Base Styles ──────────────────────────────────────
+   Sets the default font, background, and text color
+   for the entire page.
+   ─────────────────────────────────────────────────────────── */
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  background: var(--bg-app);
+
+  /* Subtle purple glow in the background corners — decorative */
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(139,92,246,0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(109,40,217,0.08) 0%, transparent 50%),
+    radial-gradient(circle at 40% 20%, rgba(91,33,182,0.06) 0%, transparent 50%);
+  background-attachment: fixed; /* background stays fixed while content scrolls */
+
+  /* Smoother font rendering on macOS and Firefox */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Custom Scrollbar ──────────────────────────────────────
+   The default browser scrollbar looks ugly. This replaces it
+   with a thin, purple-accented scrollbar that matches the theme.
+   NOTE: These ::-webkit-scrollbar rules only work in Chrome/Edge/Safari.
+   Firefox uses a different (simpler) API.
+   ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(139,92,246,0.05); }
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 99px;   /* pill shape */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover);
+  background-clip: padding-box;
+}

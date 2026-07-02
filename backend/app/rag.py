@@ -157,15 +157,51 @@ def store_document(content: str, user_id: str) -> None:
         raise
 
 
-def store_chunks(chunks: list[str], user_id: str) -> int:
-    """Embed and persist multiple chunks. Returns count stored."""
-    stored = 0
-    for i, chunk in enumerate(chunks):
-        if not chunk.strip():
-            continue
-        logger.info("Storing chunk %d/%d…", i + 1, len(chunks))
+def store_chunks(
+    chunks: list[str],
+    user_id: str,
+    on_progress=None,          # optional callable(chunks_done: int, total: int)
+) -> int:
+    """
+    Embed and persist multiple chunks. Returns count stored.
+
+    on_progress parameter (optional)
+    ---------------------------------
+    If provided, called after EACH chunk is successfully stored.
+    Signature: on_progress(chunks_done: int, total_non_empty: int)
+
+    The background upload task uses this to update the job's progress
+    percentage in real time as embeddings are generated and saved.
+
+    All existing callers that don't pass on_progress continue to work
+    unchanged — the default is None and the callback is never invoked.
+
+    WHY NOT MAKE THIS ASYNC?
+    -------------------------
+    store_document() uses SQLAlchemy's synchronous engine. The entire
+    document-processing pipeline is CPU/IO-bound synchronous code. The
+    BackgroundTask wrapper runs it in a thread, so sync is correct here.
+    """
+    # Count only non-empty chunks so the progress denominator is accurate
+    non_empty = [c for c in chunks if c.strip()]
+    total      = len(non_empty)
+    stored     = 0
+
+    for i, chunk in enumerate(non_empty):
+        logger.info("Storing chunk %d/%d…", i + 1, total)
         store_document(chunk, user_id)
         stored += 1
+        # Report progress after each chunk so the frontend progress bar moves
+        if on_progress is not None:
+            try:
+                on_progress(stored, total)
+            except Exception as cb_exc:
+                # Never let a progress callback crash the actual storage loop
+                logger.warning(
+                    "on_progress callback raised an exception (ignored): %s",
+                    cb_exc,
+                )
+
     logger.info("Stored %d chunk(s) for user_id=%s.", stored, user_id)
     return stored
 

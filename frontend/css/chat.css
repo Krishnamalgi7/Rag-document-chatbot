@@ -1,0 +1,1565 @@
+/* =========================================================
+   chat.css — ALL COMPONENT STYLES
+   =========================================================
+   PURPOSE:
+     This file styles every visible element in the chat app:
+     the sidebar, auth form, file drop zone, chat messages,
+     input area, loading animations, and the modal dialog.
+
+   HOW IT WORKS:
+     All CSS classes here match the class="..." attributes
+     written in chat.html. The JavaScript files add/remove
+     these classes dynamically to change what the user sees
+     (e.g., adding "collapsed" to the sidebar element).
+   ========================================================= */
+
+/* =========================================================
+   APP LAYOUT — The outer shell
+   =========================================================
+   The .app div is a flex container that places the sidebar
+   on the left and the chat area on the right, side by side.
+   ========================================================= */
+.app {
+  display: flex;         /* Place children side by side */
+  height: 100vh;         /* Full viewport height */
+  overflow: hidden;      /* Prevent the page from scrolling */
+  background: var(--bg-app);
+  position: relative;
+}
+
+/* Animated gradient orbs — a decorative background effect.
+   The ::before pseudo-element overlays a slow-moving gradient
+   on top of the base background. */
+.app::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(139,92,246,0.08) 0%, transparent 40%),
+    radial-gradient(circle at 70% 60%, rgba(109,40,217,0.06) 0%, transparent 40%);
+  animation: gradientOrb 20s ease-in-out infinite;
+  pointer-events: none; /* Clicks pass through this element */
+  z-index: 0;
+}
+
+@keyframes gradientOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(5%, -5%) scale(1.05); }
+  66%       { transform: translate(-5%, 5%) scale(0.95); }
+}
+
+/* =========================================================
+   SIDEBAR
+   =========================================================
+   The sidebar holds the logo, auth form (before login),
+   and the knowledge base panel (after login).
+
+   COLLAPSED STATE:
+     When JS adds the "collapsed" class to .sidebar,
+     the width shrinks to --sidebar-collapsed (70px) and
+     the content fades out via CSS transition.
+   ========================================================= */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(20px);           /* Glass blur effect */
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  padding: 22px 18px;
+  gap: 18px;
+  overflow-y: auto;     /* Scroll sidebar content if it overflows */
+  overflow-x: hidden;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition); /* Smooth collapse animation */
+  position: relative;
+  z-index: 100;
+}
+
+/* Collapsed state: sidebar shrinks to icon-only width */
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed);
+  min-width: var(--sidebar-collapsed);
+  padding: 22px 10px;
+}
+
+/* When collapsed, hide the sidebar content with fade + slide */
+.sidebar.collapsed .sidebar-content {
+  opacity: 0;
+  pointer-events: none;        /* Prevent clicking hidden elements */
+  transform: translateX(-20px);
+}
+
+/* The inner wrapper that holds all sidebar sections */
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  opacity: 1;
+  transition: all var(--transition);
+  height: 100%;
+}
+
+/* ── Sidebar Toggle Button ──────────────────────────────── */
+/* The small circular button that collapses/expands the sidebar */
+.sidebar-toggle {
+  position: absolute;
+  top: 24px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  background: var(--gradient-primary);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: var(--shadow-accent);
+  transition: all var(--transition);
+  z-index: 10;
+}
+
+/* When collapsed, center the toggle button */
+.sidebar.collapsed .sidebar-toggle {
+  right: 50%;
+  transform: translateX(50%);
+}
+
+.sidebar.collapsed .sidebar-toggle:hover {
+  transform: translateX(50%) scale(1.1);
+}
+
+.sidebar-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 50px rgba(139,92,246,0.7), 0 0 100px rgba(139,92,246,0.4);
+}
+
+.sidebar-toggle:active { transform: scale(0.95); }
+
+/* ── Sidebar Logo ──────────────────────────────────────── */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* The brain emoji icon with glow animation */
+.sidebar-logo-icon {
+  width: 38px;
+  height: 38px;
+  background: var(--gradient-primary);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-accent);
+  animation: logoGlow 4s ease-in-out infinite;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+/* Blurry glow ring behind the logo icon */
+.sidebar-logo-icon::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: var(--gradient-primary);
+  border-radius: 14px;
+  opacity: 0.5;
+  filter: blur(8px);
+  z-index: -1;
+  animation: logoPulse 4s ease-in-out infinite;
+}
+
+@keyframes logoGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(139,92,246,0.35), 0 0 40px rgba(139,92,246,0.15); }
+  50%       { box-shadow: 0 0 32px rgba(139,92,246,0.6), 0 0 56px rgba(139,92,246,0.25); }
+}
+
+@keyframes logoPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 0.8; transform: scale(1.1); }
+}
+
+/* 3D flip on hover */
+.sidebar-logo:hover .sidebar-logo-icon {
+  transform: rotateY(360deg) scale(1.1);
+}
+
+/* App name text next to logo */
+.sidebar h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+/* Small uppercase label above sections (e.g., "KNOWLEDGE BASE") */
+.sidebar-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Small tip text at bottom of sidebar */
+.sidebar-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.65;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--accent); /* Purple left accent stripe */
+}
+
+/* =========================================================
+   AUTH PANEL (shown before login)
+   =========================================================
+   Contains the email/password inputs and login/signup buttons.
+   ========================================================= */
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* Animate in when it first appears */
+  animation: authMorphIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* The "morphing out" animation when switching login ↔ signup */
+.auth-panel.morphing-out {
+  animation: authMorphOut 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes authMorphIn {
+  from { opacity: 0; transform: scale(0.92) translateY(15px); filter: blur(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0);       filter: blur(0); }
+}
+
+@keyframes authMorphOut {
+  to   { opacity: 0; transform: scale(0.92) translateY(-15px); filter: blur(4px); }
+}
+
+/* Text inputs for email and password */
+.auth-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--bg-input);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: all var(--transition);
+}
+
+.auth-input::placeholder { color: var(--text-muted); }
+
+/* Highlight the focused input field with a glow */
+.auth-input:focus {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+/* Error or success message below inputs */
+.auth-msg {
+  font-size: 13px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+  font-weight: 500;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-msg.error {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+}
+
+.auth-msg.success {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+/* Primary action button (Login / Sign Up) */
+.btn-auth {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--gradient-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-accent);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer shine effect on hover */
+.btn-auth::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.btn-auth:hover:not(:disabled)::after { transform: translateX(100%); }
+.btn-auth:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(139,92,246,0.6), 0 0 60px rgba(139,92,246,0.35);
+}
+.btn-auth:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.btn-auth:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Link-style toggle button: "No account? Sign up" / "Already have one?" */
+.btn-auth-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  padding: 8px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+
+.btn-auth-toggle:hover {
+  color: var(--accent);
+  background: var(--bg-hover);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* =========================================================
+   USER INFO (shown after login)
+   =========================================================
+   Shows the logged-in user's email and a Logout button.
+   ========================================================= */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  background: var(--bg-input);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  transition: all var(--transition);
+}
+
+.user-info:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Email text — truncated with "..." if too long */
+.user-email {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Red logout button */
+.btn-logout {
+  flex-shrink: 0;
+  background: var(--error-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--error-border);
+  color: var(--error);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-logout:hover {
+  background: var(--error);
+  color: #fff;
+  border-color: var(--error);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(248,113,113,0.35);
+}
+
+/* KB (Knowledge Base) panel — shown after login */
+.kb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: authMorphIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* =========================================================
+   DROP ZONE (file upload area)
+   =========================================================
+   The dashed rectangle where users drag-drop or click
+   to select a PDF/image to upload.
+   ========================================================= */
+.drop-zone {
+  width: 100%;
+  min-height: 118px;
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg-input);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glowing center on hover */
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(139,92,246,0.15), transparent 70%);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.drop-zone:hover:not(.has-file) {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md), 0 0 0 4px var(--accent-glow);
+}
+
+.drop-zone:hover:not(.has-file)::before { opacity: 1; }
+
+/* Dragging state — pulsing border when a file is dragged over */
+.drop-zone.dragging {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  transform: scale(1.02);
+  box-shadow: var(--shadow-accent);
+  animation: dragPulse 1s ease-in-out infinite;
+}
+
+@keyframes dragPulse {
+  0%, 100% { box-shadow: var(--shadow-accent); }
+  50%       { box-shadow: 0 0 60px rgba(139,92,246,0.7); }
+}
+
+/* Once a file is selected, disable hover effect */
+.drop-zone.has-file {
+  cursor: default;
+  border-style: solid;
+  border-color: var(--border);
+  pointer-events: none;
+}
+
+/* The icon + text shown when no file is selected */
+.drop-zone-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  z-index: 1;
+}
+
+/* Floating folder emoji animation */
+.drop-icon {
+  font-size: 34px;
+  line-height: 1;
+  animation: floatIcon 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba(139,92,246,0.4));
+}
+
+@keyframes floatIcon {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+.drop-text {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.drop-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+}
+
+/* ── File Selected State ──────────────────────────────────
+   Shown inside the drop zone once a file is chosen.
+   Shows the file icon, name, size, and a remove button.
+   ─────────────────────────────────────────────────────────── */
+.file-selected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  pointer-events: auto;
+  animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.file-icon {
+  font-size: 30px;
+  flex-shrink: 0;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 0 15px rgba(139,92,246,0.3));
+}
+
+/* 3D flip on hover */
+.file-selected:hover .file-icon {
+  transform: rotateY(180deg) scale(1.1);
+}
+
+.file-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0; /* Allows text-overflow: ellipsis to work */
+}
+
+.file-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* "longfilename..." */
+}
+
+.file-size {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* The ✕ button to remove the selected file */
+.btn-remove-file {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  padding: 0;
+}
+
+/* Turns red and rotates on hover */
+.btn-remove-file:hover {
+  background: var(--error);
+  color: #fff;
+  border-color: var(--error);
+  transform: scale(1.15) rotate(90deg);
+  box-shadow: 0 3px 10px rgba(248,113,113,0.4);
+}
+
+/* ── Upload Button ──────────────────────────────────────── */
+.btn-upload {
+  width: 100%;
+  padding: 13px 18px;
+  background: var(--gradient-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-accent);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer effect on hover */
+.btn-upload::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.55s;
+}
+
+.btn-upload:hover:not(:disabled)::after { transform: translateX(100%); }
+.btn-upload:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(139,92,246,0.6), 0 0 60px rgba(139,92,246,0.35);
+}
+.btn-upload:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.btn-upload:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Animated dots while uploading */
+.upload-spinner::after {
+  content: '● ● ●';
+  display: inline-block;
+  letter-spacing: 1px;
+  animation: spinDots 1.4s ease-in-out infinite;
+}
+
+@keyframes spinDots {
+  0%, 100% { opacity: 0.3; letter-spacing: 1px; }
+  50%       { opacity: 1;   letter-spacing: 4px; }
+}
+
+/* Success or error message after upload attempt */
+.upload-feedback {
+  font-size: 13px;
+  padding: 11px 15px;
+  border-radius: var(--radius-md);
+  line-height: 1.55;
+  font-weight: 500;
+  animation: feedbackIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes feedbackIn {
+  from { opacity: 0; transform: scale(0.9) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+.upload-feedback.success {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.upload-feedback.error {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+}
+
+/* =========================================================
+   CHAT MAIN AREA
+   ========================================================= */
+.chat-main {
+  flex: 1;                /* Takes all remaining width after sidebar */
+  display: flex;
+  flex-direction: column; /* Stack header → messages → input vertically */
+  overflow: hidden;
+  background: var(--bg-chat);
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Chat Header ────────────────────────────────────────── */
+.chat-header {
+  padding: 15px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 var(--border);
+}
+
+/* Green pulsing dot that indicates "online / active" status */
+.chat-header-dot {
+  width: 9px;
+  height: 9px;
+  background: var(--success);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--success);
+  animation: breathe 2.5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.55; transform: scale(1.25); }
+}
+
+.chat-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+/* Yellow badge in header when not logged in */
+.public-badge {
+  margin-left: auto;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--warning-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+  letter-spacing: 0.04em;
+}
+
+/* ── Messages Area ─────────────────────────────────────── */
+.chat-messages {
+  flex: 1;            /* Fills available height between header and input */
+  overflow-y: auto;   /* Scroll when messages overflow */
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Empty state — shown when no messages yet */
+.chat-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  padding: 80px 40px;
+  animation: fadeUp 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Large floating emoji */
+.chat-empty-icon {
+  font-size: 68px;
+  line-height: 1;
+  animation: floatBig 5s ease-in-out infinite;
+  filter: drop-shadow(0 10px 30px rgba(139,92,246,0.3));
+}
+
+@keyframes floatBig {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%       { transform: translateY(-20px) rotate(3deg); }
+}
+
+.chat-empty h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.chat-empty p {
+  font-size: 15px;
+  max-width: 440px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+/* ── Message Row ─────────────────────────────────────────
+   Each message (user or AI) is a "row" that contains
+   an optional badge and a bubble.
+   ─────────────────────────────────────────────────────────── */
+.message-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 780px;
+  width: 100%;
+  animation: msgIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* User messages align to the right */
+.message-row.user  { align-self: flex-end;  align-items: flex-end; }
+/* AI messages align to the left */
+.message-row.ai    { align-self: flex-start; align-items: flex-start; }
+/* Error messages center */
+.message-row.error { align-self: center;     align-items: center; }
+
+/* ── Message Bubble ──────────────────────────────────────
+   The actual speech-bubble box containing the message text.
+   ─────────────────────────────────────────────────────────── */
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  font-size: 14.5px;
+  line-height: 1.65;
+  max-width: 100%;
+  word-break: break-word; /* Prevents long URLs/words from overflowing */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+/* User bubble — purple gradient, white text */
+.message-row.user .message-bubble {
+  background: var(--bg-msg-user);
+  color: var(--text-on-user);
+  border-bottom-right-radius: 5px; /* "Tail" effect on the user side */
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: var(--shadow-accent);
+}
+
+.message-row.user .message-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 40px rgba(139,92,246,0.6), 0 0 60px rgba(139,92,246,0.35);
+}
+
+/* AI bubble — dark glass */
+.message-row.ai .message-bubble {
+  background: var(--bg-msg-ai);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 5px; /* "Tail" effect on the AI side */
+  box-shadow: var(--shadow-sm);
+}
+
+.message-row.ai .message-bubble:hover {
+  border-color: var(--border-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Error bubble — red tint */
+.message-row.error .message-bubble {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+  font-size: 13.5px;
+}
+
+/* ── Mode Badge ──────────────────────────────────────────
+   Appears above AI bubbles showing whether the response
+   came from the user's documents (RAG) or general AI knowledge.
+   ─────────────────────────────────────────────────────────── */
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: badgeIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform var(--transition);
+}
+
+@keyframes badgeIn {
+  from { opacity: 0; transform: scale(0.7) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+.mode-badge:hover { transform: scale(1.04); }
+
+/* Green badge — RAG mode (from documents) */
+.mode-badge.rag {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+/* Yellow badge — fallback AI mode */
+.mode-badge.fall {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+/* ── Loading Bubble ──────────────────────────────────────
+   Three bouncing dots shown while waiting for the AI response.
+   ─────────────────────────────────────────────────────────── */
+.loading-bubble {
+  background: var(--bg-msg-ai);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-bottom-left-radius: 5px;
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: var(--shadow-sm);
+  animation: msgIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Individual dot */
+.loading-dot {
+  width: 9px;
+  height: 9px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: dotPop 1.4s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* Stagger each dot's animation by 0.22s */
+.loading-dot:nth-child(2) { animation-delay: 0.22s; }
+.loading-dot:nth-child(3) { animation-delay: 0.44s; }
+
+@keyframes dotPop {
+  0%, 80%, 100% { transform: scale(0.65) translateY(0);  opacity: 0.3; }
+  40%            { transform: scale(1.2)  translateY(-7px); opacity: 1; }
+}
+
+/* =========================================================
+   INPUT AREA
+   =========================================================
+   The bar at the bottom with the textarea and send button.
+   ========================================================= */
+.chat-input-area {
+  padding: 14px 22px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Wrapper for the textarea + send button, side by side */
+.chat-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: var(--bg-input);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 6px 8px 6px 16px;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+  max-width: 820px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Glow effect when the textarea is focused */
+.chat-input-row:focus-within {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* The text input area */
+.chat-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.6;
+  resize: none;           /* Hide the manual resize handle */
+  min-height: 22px;
+  max-height: 130px;      /* Stops growing after ~5 lines */
+  padding: 3px 0;
+}
+
+.chat-textarea::placeholder { color: var(--text-muted); }
+
+/* The ↑ send button */
+.btn-send {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 17px;
+  font-weight: bold;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-accent);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-send::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.22);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.btn-send:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.08);
+  box-shadow: 0 10px 40px rgba(139,92,246,0.6), 0 0 60px rgba(139,92,246,0.35);
+}
+
+.btn-send:hover:not(:disabled)::after { opacity: 1; }
+.btn-send:active:not(:disabled) { transform: translateY(0) scale(0.96); }
+.btn-send:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+/* Small status text below the input (e.g., "Public mode · No documents") */
+.input-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 12px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+/* =========================================================
+   MARKDOWN STYLES
+   =========================================================
+   AI responses are rendered as HTML from Markdown using marked.js.
+   These styles make the HTML elements look good inside
+   message bubbles.
+   ========================================================= */
+.message-bubble h1,
+.message-bubble h2,
+.message-bubble h3,
+.message-bubble h4 {
+  margin-top: 14px;
+  margin-bottom: 7px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+/* User bubble headings are white */
+.message-row.user .message-bubble h1,
+.message-row.user .message-bubble h2,
+.message-row.user .message-bubble h3,
+.message-row.user .message-bubble h4 { color: #ffffff; }
+
+.message-bubble h1:first-child,
+.message-bubble h2:first-child,
+.message-bubble h3:first-child { margin-top: 0; }
+
+.message-bubble h1 { font-size: 19px; }
+.message-bubble h2 { font-size: 17px; }
+.message-bubble h3 { font-size: 15.5px; }
+
+.message-bubble p { margin: 7px 0; color: inherit; }
+.message-bubble p:first-child { margin-top: 0; }
+.message-bubble p:last-child  { margin-bottom: 0; }
+
+.message-bubble ul,
+.message-bubble ol { margin: 7px 0; padding-left: 24px; color: inherit; }
+
+.message-bubble li { margin-bottom: 5px; line-height: 1.6; color: inherit; }
+
+.message-bubble strong { font-weight: 700; color: var(--text-primary); }
+.message-row.user .message-bubble strong { color: #ffffff; }
+
+.message-bubble em { font-style: italic; color: var(--text-secondary); }
+.message-row.user .message-bubble em { color: rgba(255,255,255,0.85); }
+
+/* Inline code */
+.message-bubble code {
+  background: var(--bg-surface2);
+  color: var(--text-code);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  border: 1px solid var(--border);
+}
+
+.message-row.user .message-bubble code {
+  background: rgba(255,255,255,0.2);
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.25);
+}
+
+/* Code block */
+.message-bubble pre {
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition);
+}
+
+.message-bubble pre:hover { box-shadow: var(--shadow-md); }
+
+.message-bubble pre code {
+  background: transparent;
+  color: var(--text-code);
+  padding: 0;
+  border: none;
+  font-size: 13.5px;
+}
+
+.message-bubble a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.message-bubble a:hover { color: var(--accent-hover); }
+.message-row.user .message-bubble a { color: rgba(255,255,255,0.9); }
+
+.message-bubble blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 2px 0 2px 16px;
+  margin: 10px 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.message-row.user .message-bubble blockquote {
+  border-left-color: rgba(255,255,255,0.5);
+  color: rgba(255,255,255,0.8);
+}
+
+.message-bubble table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.message-bubble th,
+.message-bubble td { border: 1px solid var(--border); padding: 9px 13px; text-align: left; }
+
+.message-bubble th { background: var(--bg-surface2); font-weight: 600; color: var(--text-primary); }
+.message-bubble td { color: var(--text-secondary); }
+.message-bubble hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* =========================================================
+   SESSION SUMMARY MODAL
+   =========================================================
+   A full-screen overlay that appears when the user clicks
+   "Logout". It shows a summary of the chat session before
+   the user's data is deleted.
+   ========================================================= */
+
+/* Darkened overlay behind the modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;                            /* Covers the entire screen */
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  display: none;                       /* Hidden by default — JS shows it */
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;                       /* Above everything else */
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Show the modal — JS adds this class */
+.modal-overlay.visible {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* The white card in the center of the overlay */
+.modal-content {
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 660px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(139,92,246,0.1) inset;
+  animation: modalUp 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
+  overflow: hidden;
+}
+
+@keyframes modalUp {
+  from { opacity: 0; transform: translateY(36px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Modal header: title + close button */
+.modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.modal-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+/* The ✕ button to close the modal */
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 19px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn-close-modal:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: scale(1.1) rotate(90deg);
+}
+
+.modal-body {
+  padding: 22px;
+  overflow-y: auto;   /* Scroll if the summary is very long */
+  flex-grow: 1;
+  background: var(--bg-chat);
+}
+
+/* Loading spinner while fetching the summary */
+.summary-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+  color: var(--text-secondary);
+  gap: 16px;
+  text-align: center;
+}
+
+/* Spinning circle */
+.loading-spinner {
+  width: 38px;
+  height: 38px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* The rendered markdown summary text */
+.summary-markdown {
+  color: var(--text-primary);
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+
+.summary-markdown h1,
+.summary-markdown h2,
+.summary-markdown h3 {
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-primary);
+  font-weight: 700;
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+}
+
+.summary-markdown h2 { font-size: 17px; }
+.summary-markdown h3 { font-size: 15.5px; }
+
+.summary-markdown p   { color: var(--text-secondary); margin-bottom: 0.9em; }
+.summary-markdown ul  { padding-left: 1.4em; margin-bottom: 1em; color: var(--text-secondary); }
+.summary-markdown li  { margin-bottom: 0.45em; }
+.summary-markdown strong { color: var(--accent); font-weight: 600; }
+
+/* Modal footer: copy/download tools + cancel/logout actions */
+.modal-footer {
+  padding: 15px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.modal-tools   { display: flex; gap: 10px; }
+.modal-actions { display: flex; gap: 10px; margin-left: auto; }
+
+.modal-footer button {
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.modal-footer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Transparent button with subtle border */
+.btn-outline {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-outline:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-light);
+  background: var(--bg-hover);
+  transform: translateY(-1px);
+}
+
+/* Ghost cancel button */
+.btn-cancel {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* Red danger button for "Finalize Logout & Delete Data" */
+.btn-danger {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error-border);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--error);
+  color: #fff;
+  border-color: var(--error);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(248,113,113,0.35);
+}
+
+/* =========================================================
+   RESPONSIVE STYLES
+   =========================================================
+   On small screens (tablets and phones), the sidebar
+   becomes a floating overlay instead of a side panel.
+   ========================================================= */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;   /* Float above the chat area */
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(0);   /* Visible by default */
+  }
+
+  /* On mobile, "collapsed" means completely hidden off-screen */
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+
+  /* Move the toggle button outside the sidebar so it's always visible */
+  .sidebar-toggle {
+    right: -40px;
+  }
+
+  .chat-messages  { padding: 16px; gap: 16px; }
+  .chat-input-area { padding: 12px 14px 18px; }
+  .chat-header    { padding: 14px 18px; }
+  .message-row    { max-width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .chat-messages  { padding: 14px 12px; }
+  .message-bubble { font-size: 13.5px; padding: 10px 13px; }
+  .chat-input-row { padding: 7px 10px 7px 14px; }
+  .btn-send       { width: 34px; height: 34px; font-size: 15px; }
+  /* Stack modal footer buttons vertically */
+  .modal-footer   { flex-direction: column; align-items: stretch; }
+  .modal-tools, .modal-actions { width: 100%; }
+  .modal-tools button, .modal-actions button { flex: 1; }
+}
+
+/* =========================================================
+   ASYNC UPLOAD PROGRESS BAR (v4)
+   =========================================================
+   These styles control the animated progress bar that appears
+   during background document processing (Phase 2 of the async
+   upload flow).
+
+   The bar is injected into the DOM by upload.js. It lives
+   just above the #upload-feedback element in the sidebar.
+
+   Animation strategy:
+   - The track is the grey "rail".
+   - The fill is the purple bar that grows from left to right.
+   - CSS transition: width 0.6s ease — smooth, not jumpy.
+   - The shimmer animation gives a "processing" feeling.
+   ========================================================= */
+
+/* ── Wrapper ──────────────────────────────────────────────
+   Hidden by default. upload.js calls showProgressBar() which
+   sets display: block to make it visible. */
+.upload-progress-wrapper {
+  display       : none;   /* hidden until Phase 2 starts */
+  margin-top    : 10px;
+  padding       : 0 2px;
+}
+
+/* ── Track (the grey rail behind the fill) ───────────────── */
+.upload-progress-bar-track {
+  width         : 100%;
+  height        : 7px;
+  background    : rgba(255, 255, 255, 0.08);   /* subtle dark track */
+  border-radius : 999px;
+  overflow      : hidden;
+  position      : relative;
+}
+
+/* ── Fill (the animated purple bar) ─────────────────────── */
+.upload-progress-bar-fill {
+  height        : 100%;
+  width         : 0%;          /* JS sets this via style.width */
+  border-radius : 999px;
+  background    : linear-gradient(
+    90deg,
+    var(--accent-purple)   0%,
+    var(--accent-violet)  60%,
+    #a78bfa               100%
+  );
+  /* Smooth width transition — key to making the bar feel alive */
+  transition    : width 0.6s ease;
+  position      : relative;
+  overflow      : hidden;
+}
+
+/* Shimmer sweep animation on the fill —
+   a white highlight that slides across the bar repeatedly.
+   Gives the user the feeling that work is actively happening. */
+.upload-progress-bar-fill::after {
+  content    : '';
+  position   : absolute;
+  top        : 0;
+  left       : -60%;
+  width      : 60%;
+  height     : 100%;
+  background : linear-gradient(
+    90deg,
+    transparent          0%,
+    rgba(255,255,255,0.3) 50%,
+    transparent          100%
+  );
+  animation  : progressShimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes progressShimmer {
+  0%   { left: -60%; }
+  100% { left: 120%; }
+}
+
+/* ── Label (step text below the bar) ─────────────────────── */
+.upload-progress-label {
+  margin      : 6px 0 0 0;
+  font-size   : 11.5px;
+  color       : var(--text-muted);
+  text-align  : center;
+  letter-spacing: 0.02em;
+  /* Smooth text transition when message changes */
+  transition  : color 0.3s ease;
+}
+
