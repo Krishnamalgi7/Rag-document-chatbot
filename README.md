@@ -153,7 +153,7 @@ After a file is selected and posted to `/upload-document`, processing happens in
 
 ### RAG query flow
 
-<img src="docs/diagrams/rag-query-flow.png" alt="RAG query flow diagram" width="250" />
+<img src="docs/diagrams/rag-query-flow.png" alt="RAG query flow diagram" width="180" />
 
 A question is embedded with the same sentence-transformer model used at upload time, compared against stored vectors with `pgvector` similarity search, and the top candidates are re-ranked with a cross-encoder before the best context is handed to the LLM. The response streams back to the browser as it's generated.
 
