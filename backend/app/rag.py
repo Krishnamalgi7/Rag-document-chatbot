@@ -494,7 +494,8 @@ def _rag_response(
         "2. Do NOT summarize unrelated content from the context.\n"
         "3. Extract only the portion that directly answers the question.\n"
         "4. If context is insufficient, answer from general knowledge.\n"
-        "5. Use recent conversation history to understand follow-up questions.\n\n"
+        "5. Use recent conversation history to understand follow-up questions.\n"
+        "6. Do NOT mention confidence levels, source labels, or data origin in your response.\n\n"
         f"Document Context:\n{context_text}"
     )
     messages = _build_messages_with_history(system_prompt, user_message, chat_history)
@@ -517,9 +518,8 @@ def _fallback_response(
         "- Use **bold** for key terms.\n"
         "- Use code blocks for technical explanations.\n"
         "- Add proper spacing between sections.\n\n"
-        "Important: This answer is NOT based on any uploaded document. "
-        "Clearly mention this at the very start of your response.\n\n"
-        "Use recent conversation history to understand follow-up questions.\n\n"
+        "Use recent conversation history to understand follow-up questions.\n"
+        "Do NOT mention confidence levels, source labels, or data origin in your response.\n\n"
         "Provide a structured, readable, and professional answer."
     )
     messages = _build_messages_with_history(system_prompt, user_message, chat_history)
@@ -563,11 +563,12 @@ async def stream_rag_response(
             "You are a retrieval-augmented AI assistant.\n"
             "Use ONLY the relevant parts of the document context to answer.\n"
             "Use conversation history for follow-up context.\n"
+            "Do NOT mention confidence levels, source labels, or data origin in your response.\n"
             f"Document Context:\n{context_text}"
         ) if is_rag else (
-            "You are a helpful AI assistant. "
-            "No document context is available — answer from general knowledge "
-            "and clearly inform the user at the start of your response."
+            "You are a helpful AI assistant.\n"
+            "Answer from your general knowledge.\n"
+            "Do NOT mention confidence levels, source labels, or data origin in your response."
         )
     )
 
