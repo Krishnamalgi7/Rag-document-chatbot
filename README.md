@@ -2,7 +2,7 @@
 
 # Kito AI
 
-**An ephemeral, document-aware chatbot built on Retrieval-Augmented Generation.**
+**An ephemeral Retrieval-Augmented Generation (RAG) chatbot that enables secure document-based conversations with automatic document cleanup after logout.**
 
 Upload a PDF or image, ask questions about it, and get grounded answers — or just chat without an account. Every document you upload is permanently deleted the moment you log out.
 
@@ -47,6 +47,26 @@ Kito AI is a full-stack RAG (Retrieval-Augmented Generation) chatbot. It's built
 - Logging out deletes every document and embedding tied to that account. Nothing persists beyond the session.
 
 ---
+
+## Key Highlights
+
+• Retrieval-Augmented Generation (RAG)
+
+• Background document processing
+
+• OCR for scanned PDFs and images
+
+• Cross-encoder re-ranking
+
+• Streaming AI responses
+
+• PostgreSQL + pgvector vector search
+
+• JWT Authentication
+
+• Ephemeral document storage
+
+• Session summary generation
 
 ## Screenshots
 
@@ -141,7 +161,7 @@ A question is embedded with the same sentence-transformer model used at upload t
 
 <img src="docs/diagrams/database-schema.png" alt="Database schema diagram" width="520" />
 
-Each user can own many documents (their extracted content and embeddings) and, per the data model, many chat messages. In the current implementation, the `documents` table — content, embedding, and the owning `user_id` — is what actually backs retrieval; it's cleared entirely on logout.
+Each user can own multiple uploaded documents and chat messages. The `documents` table stores extracted document content together with vector embeddings used during retrieval. All document data associated with a user is automatically deleted on logout to maintain session privacy.
 
 ---
 
@@ -149,7 +169,7 @@ Each user can own many documents (their extracted content and embeddings) and, p
 
 | Layer | Technology |
 |---|---|
-| Frontend | HTML, CSS, vanilla JavaScript (no build step) |
+| Frontend | HTML, CSS, vanilla JavaScript (ES6) |
 | Backend | FastAPI (Python) |
 | Database | PostgreSQL + `pgvector`, hosted on Supabase |
 | Authentication | Supabase Auth (JWT) |
@@ -157,7 +177,6 @@ Each user can own many documents (their extracted content and embeddings) and, p
 | Re-ranking | Cross-encoder re-ranker over top retrieved chunks |
 | LLM | Groq — Llama 3.3-70B (streaming) |
 | Document parsing | `pdfplumber`, OCR, table extraction |
-| Deployment | Render (see `render.yaml`) |
 
 ---
 
@@ -182,11 +201,10 @@ Kito AI/
 │       ├── 03_document_response.png
 │       └── 04_session_summary.png
 ├── frontend/
-│   ├── chat.html                   The application shell
+│   ├── chat.html                   The application Interface
 │   ├── index.html                  Redirects to chat.html
 │   ├── css/
 │   └── js/
-├── venv/
 ├── .gitignore
 ├── render.yaml
 └── README.md
@@ -256,22 +274,45 @@ Visit `http://localhost:8080`.
 
 ---
 
-## API reference
+## API Reference
+
+### Authentication & Health
 
 | Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/` | Health check |
-| `POST` | `/rag-chat` | Non-streaming chat completion |
-| `POST` | `/rag-chat/stream` | Streaming chat completion |
-| `POST` | `/api/session/summary` | Generates the end-of-session summary |
-| `POST` | `/upload-document` | Starts background processing of an uploaded file, returns a job ID |
-| `GET` | `/upload-document/status/{job_id}` | Polls the status of a background upload job |
-| `POST` | `/upload-pdf` | Legacy synchronous single-file upload |
-| `DELETE` | `/clear-user-documents` | Deletes all of the authenticated user's documents |
+|--------|----------|-------------|
+| `GET` | `/` | Health check endpoint to verify the backend is running. |
 
 ---
 
-## Known limitations
+### Chat APIs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/rag-chat` | Generate a standard (non-streaming) AI response. |
+| `POST` | `/rag-chat/stream` | Stream AI responses token-by-token for real-time chat. |
+| `POST` | `/api/session/summary` | Generate a summary of the current chat session before logout. |
+
+---
+
+### Document APIs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/upload-document` | Upload a document and start asynchronous background processing. Returns a `job_id`. |
+| `GET` | `/upload-document/status/{job_id}` | Check the processing status of an uploaded document. |
+| `DELETE` | `/clear-user-documents` | Delete all uploaded documents and embeddings associated with the authenticated user. |
+
+---
+
+### Legacy Endpoint
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/upload-pdf` | Legacy synchronous document upload endpoint (retained for backward compatibility). |
+
+---
+
+## Current Limitations
 
 - Upload job status is stored in memory, so it doesn't survive a backend restart or scale across multiple instances without moving to shared storage such as Redis.
 - OCR and table extraction depend on Tesseract and Poppler being installed on the host — they aren't pulled in automatically by `pip install`.
