@@ -246,13 +246,13 @@ function toggleAuthMode() {
 // Updates button labels and hint text based on the current auth mode.
 function updateAuthFormText() {
   if (currentAuthMode === "login") {
-    elements.authTitle.textContent    = "Login to upload Documents";
-    elements.btnAuth.textContent      = "Login";
-    elements.btnAuthToggle.textContent = "No account? Sign up";
+    elements.authTitle.textContent    = "Sign in";
+    elements.btnAuth.textContent      = "Continue";
+    elements.btnAuthToggle.textContent = "No account? Create one";
   } else {
-    elements.authTitle.textContent    = "Create an account";
-    elements.btnAuth.textContent      = "Sign Up";
-    elements.btnAuthToggle.textContent = "Already have an account? Login";
+    elements.authTitle.textContent    = "Create account";
+    elements.btnAuth.textContent      = "Create account";
+    elements.btnAuthToggle.textContent = "Already have an account? Sign in";
   }
 }
 
@@ -289,7 +289,7 @@ async function handleAuthSubmit() {
       // Call Supabase signup
       await signupUser(email, password);
       // Signup doesn't log in immediately — user must confirm email
-      showAuthMessage("success", "✅ Check your email to confirm signup, then log in.");
+      showAuthMessage("success", "Check your email to confirm signup, then sign in.");
       currentAuthMode = "login";
       updateAuthFormText();
     }
@@ -496,7 +496,7 @@ function renderAIMessageBubble(text, mode, confidence) {
   // Create the mode badge
   const badge = document.createElement("span");
   badge.className = "mode-badge fall"; // Default to "fall" (fallback/loading)
-  badge.textContent = "⏳ Thinking…";
+  badge.textContent = "Thinking…";
 
   // Create the message bubble
   const bubble = document.createElement("div");
@@ -514,16 +514,19 @@ function renderAIMessageBubble(text, mode, confidence) {
 
 
 // ── updateModeBadge ───────────────────────────────────────
-// Updates the badge text and color once the stream finishes
-// and we know whether the response came from documents (rag) or AI (fallback).
+// Updates the badge icon and label once the stream completes.
 // NOTE: confidence is received but intentionally not shown to the user.
 function updateModeBadge(badge, mode, confidence) {
+  // Inline SVG icons — Lucide stroke style, 9px
+  const iconDoc = `<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`;
+  const iconAI  = `<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+
   if (mode === "rag") {
-    badge.className = "mode-badge rag"; // Green
-    badge.textContent = "📄 From Documents";
+    badge.className = "mode-badge rag";
+    badge.innerHTML = iconDoc + " From Documents";
   } else {
-    badge.className = "mode-badge fall"; // Yellow
-    badge.textContent = "🤖 AI Response";
+    badge.className = "mode-badge fall";
+    badge.innerHTML = iconAI + " AI Response";
   }
 }
 
@@ -630,7 +633,7 @@ function showKBPanel() {
 
   // Show the logged-in user's email (truncated by CSS)
   if (currentUser) {
-    elements.userEmail.textContent = "👤 " + currentUser.email;
+    elements.userEmail.textContent = currentUser.email;
   }
 
   // Attach the logout handler to the logout button
@@ -665,15 +668,15 @@ function showAuthPanel() {
   elements.authPanel.style.display = "flex";
   elements.kbPanel.style.display   = "none";
 
-  // Show "🔓 Public Mode" badge in the header
+  // Show "Public" badge in the header
   if (elements.publicBadge) {
     elements.publicBadge.style.display = "";
   }
 
   // Update placeholder and hint for guest mode
-  elements.chatInput.placeholder    = "Ask anything… (Login to enable document search)";
-  elements.inputHint.textContent    = "Public mode · No documents · All responses use general AI knowledge";
-  elements.chatEmptyText.textContent = "Public Mode Active — Chat freely, or log in to unlock RAG search with your documents";
+  elements.chatInput.placeholder    = "Ask anything…";
+  elements.inputHint.textContent    = "Public mode · responses use general AI knowledge";
+  elements.chatEmptyText.textContent = "Public mode — chat freely, or sign in to enable document context";
 }
 
 

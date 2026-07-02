@@ -1,6 +1,6 @@
-# Arch AI — Frontend Documentation
+# Arch Knowledge — Frontend Documentation
 
-> **A plain HTML + CSS + Vanilla JavaScript frontend for the Arch AI chatbot.**
+> **A plain HTML + CSS + Vanilla JavaScript frontend for the Arch Knowledge chatbot.**
 > No React. No build step. No npm. Just open `chat.html` in a browser.
 
 ---

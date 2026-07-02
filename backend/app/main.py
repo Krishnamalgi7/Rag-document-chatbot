@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-app = FastAPI(title="Arch AI Chatbot API", version="4.0.0")
+app = FastAPI(title="Arch Knowledge Chatbot API", version="4.0.0")
 
 # ---------------------------------------------------------------------------
 # CORS
@@ -442,7 +442,7 @@ def root():
     logger.info("Health check hit.")
     return {
         "status"  : "ok",
-        "message" : "Arch AI Chatbot API is running 🚀",
+        "message" : "Arch Knowledge Chatbot API is running 🚀",
         "version" : "4.0.0",
         "upload"  : "async — returns job_id immediately",
         "features": {

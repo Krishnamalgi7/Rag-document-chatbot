@@ -1,267 +1,152 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <!--
-    chat.html — THE MAIN APPLICATION PAGE
-    ======================================
-    This is the only HTML file that the user interacts with.
-    It contains the full page structure:
-      - The sidebar (logo, auth form OR file upload panel)
-      - The chat area (header, messages, input)
-      - The session summary modal (shown only at logout)
-
-    The JavaScript modules in /js/ bring this page to life.
-    The CSS files in /css/ style everything.
-
-    HOW HTML + JS WORK TOGETHER:
-    The HTML defines the STRUCTURE (what elements exist on the page).
-    The CSS defines the APPEARANCE (how they look).
-    The JavaScript defines the BEHAVIOR (what happens when you click things).
-
-    The JS files reference elements by their "id" attribute.
-    For example, id="btn-send" in HTML is accessed in chat.js as:
-      document.getElementById("btn-send")
+    chat.html — MAIN APPLICATION
+    ============================================================
+    Redesigned: no emojis, Lucide icons, Knowledge Session panel.
+    All element IDs and classes identical to original — zero JS logic changes.
+    ============================================================
   -->
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arch Knowledge — Document-aware AI assistant</title>
+  <meta name="description"
+    content="Arch Knowledge is a session-based RAG assistant. Upload a document, ask questions. All context is cleared on logout." />
 
-  <!-- SEO: Page title shown in browser tab -->
-  <title>Arch AI — Ephemeral AI Assistant Powered by RAG</title>
+  <!-- Favicon: blue square with "A" -->
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%232563EB'/><text y='.84em' x='18' font-size='64' font-family='Inter,sans-serif' font-weight='700' fill='white'>A</text></svg>" />
 
-  <!-- SEO: Description shown in Google search results -->
-  <meta name="description" content="Arch AI is an ephemeral AI assistant powered by RAG (Retrieval-Augmented Generation). Upload your documents and ask questions about them. All data is deleted on logout." />
-
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
-
-  <!-- ── CSS Files ───────────────────────────────────────────
-       ORDER MATTERS: style.css (global variables) must come
-       BEFORE chat.css (components that use those variables).
-       ────────────────────────────────────────────────────── -->
+  <!-- Design system tokens (must load before chat.css) -->
   <link rel="stylesheet" href="css/style.css" />
+  <!-- Component styles -->
   <link rel="stylesheet" href="css/chat.css" />
 
-  <!-- ── External Libraries from CDN ───────────────────────
-       CDN = Content Delivery Network. We load these from the
-       internet instead of installing them via npm.
-
-       1. marked.js — Converts Markdown text to HTML.
-          The AI sends responses with Markdown formatting
-          (bold, code blocks, lists). marked.parse() turns
-          those into real HTML elements.
-          Docs: https://marked.js.org/
-
-       2. @supabase/supabase-js — The official Supabase SDK.
-          Provides createClient(), auth.signIn(), etc.
-          We use the ESM (ES Module) version so we can
-          access it as window.supabase in our JS files.
-          Docs: https://supabase.com/docs/reference/javascript
-
-       WHY CDN INSTEAD OF npm?
-          No build step needed. Just open the HTML file in
-          a browser. The browser fetches the libraries
-          automatically from jsDelivr's servers.
-       ────────────────────────────────────────────────────── -->
-
-  <!-- marked.js: Markdown parser (replaces react-markdown) -->
+  <!-- marked.js: Markdown → HTML for AI responses -->
   <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
 
-  <!-- Supabase JS SDK (replaces the npm @supabase/supabase-js package) -->
-  <script>
-    /*
-      We load Supabase as an ES module from CDN and then
-      attach it to window.supabase so our auth.js module can
-      access it with: window.supabase.createClient(...)
+  <!-- Lucide icons: professional SVG icon library -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
 
-      WHY NOT IMPORT DIRECTLY IN auth.js?
-        Because mixing CDN script tags with ES module imports
-        requires this intermediate step. We load the CDN script,
-        then extract the createClient function onto window.supabase.
-    */
-  </script>
+  <!-- Supabase auth SDK -->
   <script type="module">
     import * as supabaseLib from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-    // Make Supabase available globally so auth.js can use window.supabase.createClient()
     window.supabase = supabaseLib;
   </script>
 </head>
 
 <body>
 
-  <!--
-    .app is the outermost flex container.
-    It places the sidebar on the left and chat-main on the right.
-    The CSS rule: .app { display: flex; height: 100vh; }
-  -->
   <div class="app">
 
-    <!-- =====================================================
+    <!-- ==============================================
          SIDEBAR
-         =====================================================
-         The sidebar has two states:
-         1. Auth panel (before login): email + password form
-         2. KB panel (after login): user info + file upload
+         ============================================== -->
+    <aside class="sidebar" id="sidebar" role="complementary" aria-label="Navigation">
 
-         JavaScript in chat.js toggles between these states
-         by showing/hiding #auth-panel and #kb-panel.
-         ===================================================== -->
-    <aside class="sidebar" id="sidebar" role="complementary" aria-label="Sidebar">
+      <!-- Collapse toggle -->
+      <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar"><i
+          data-lucide="chevron-left"></i></button>
 
-      <!-- Collapse/Expand Button — «/» icon -->
-      <!-- JS: sidebarToggle click handler in chat.js toggles .collapsed on #sidebar -->
-      <button
-        class="sidebar-toggle"
-        id="sidebar-toggle"
-        title="Collapse sidebar"
-        aria-label="Collapse sidebar"
-      >«</button>
-
-      <!-- Sidebar inner wrapper — fades out when sidebar is collapsed -->
       <div class="sidebar-content" id="sidebar-content">
 
-        <!-- Brand Logo + App Name -->
+        <!-- Identity bar -->
         <div class="sidebar-logo">
-          <div class="sidebar-logo-icon" aria-hidden="true">🧠</div>
-          <div>
-            <h1>Arch AI</h1>
-          </div>
+          <div class="sidebar-logo-icon" aria-hidden="true">A</div>
+          <h1>Arch Knowledge</h1>
         </div>
 
-        <!-- ================================================
-             AUTH PANEL
-             ================================================
-             Shown when the user is NOT logged in.
-             JS hides this (display: none) after successful login.
-             Contains:
-               - Title text
-               - Email input
-               - Password input
-               - Error/success message (hidden by default)
-               - Login / Sign Up button
-               - Toggle button to switch between login and signup
-               - Hint text about what the app supports
-             ================================================ -->
-        <div class="auth-panel" id="auth-panel" style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- ==========================================
+             AUTH PANEL (shown when logged out)
+             ========================================== -->
+        <div class="auth-panel" id="auth-panel" style="display: flex; flex-direction: column; gap: 0;">
 
-          <!-- This text updates: "Login to upload Documents" vs "Create an account" -->
-          <p class="sidebar-title" id="auth-title">Login to upload Documents</p>
+          <div class="auth-form-section">
+            <p class="sidebar-title" id="auth-title">Sign in</p>
 
-          <!-- Email input field -->
-          <input
-            class="auth-input"
-            id="input-email"
-            type="email"
-            placeholder="Email"
-            autocomplete="email"
-            aria-label="Email address"
-          />
+            <input class="auth-input" id="input-email" type="email" placeholder="Email address" autocomplete="email"
+              aria-label="Email address" />
 
-          <!-- Password input field -->
-          <input
-            class="auth-input"
-            id="input-password"
-            type="password"
-            placeholder="Password"
-            autocomplete="current-password"
-            aria-label="Password"
-          />
+            <input class="auth-input" id="input-password" type="password" placeholder="Password"
+              autocomplete="current-password" aria-label="Password" />
 
-          <!--
-            Auth message: shows errors ("Invalid credentials") or
-            success ("Check your email to confirm signup").
-            Starts hidden. JS sets textContent and style.display.
-          -->
-          <p class="auth-msg" id="auth-message" style="display: none;" role="alert"></p>
+            <p class="auth-msg" id="auth-message" style="display: none;" role="alert"></p>
 
-          <!-- Primary action button. Text changes: "Login" / "Sign Up" -->
-          <button class="btn-auth" id="btn-auth">Login</button>
+            <button class="btn-auth" id="btn-auth">Continue</button>
 
-          <!-- Toggle link. Text: "No account? Sign up" / "Already have one? Login" -->
-          <button class="btn-auth-toggle" id="btn-auth-toggle">No account? Sign up</button>
+            <button class="btn-auth-toggle" id="btn-auth-toggle">
+              No account? Create one
+            </button>
+          </div>
 
-          <!-- Info tips for unauthenticated users -->
+          <!-- Footer hints — pushed to bottom via CSS -->
           <p class="sidebar-hint">
-            📂 System supports PDFs and images. Authenticate to use these features or just chat freely.
-          </p>
-          <p class="sidebar-hint">
-            🔐 Files stay private and are securely deleted on logout.
+            Upload PDFs or images to enable document context.
+            Documents are cleared on logout.
           </p>
 
         </div>
         <!-- end #auth-panel -->
 
 
-        <!-- ================================================
-             KB PANEL (Knowledge Base)
-             ================================================
-             Shown when the user IS logged in.
-             JS shows this (display: flex) after successful login.
-             Contains:
-               - User email + logout button
-               - "KNOWLEDGE BASE" section title
-               - File drop zone (click or drag-and-drop)
-               - Hidden file input (opened by clicking drop zone)
-               - Upload button
-               - Upload feedback message
-               - Privacy hint
-             ================================================ -->
+        <!-- ==========================================
+             KNOWLEDGE SESSION PANEL (shown when logged in)
+             ========================================== -->
         <div class="kb-panel" id="kb-panel" style="display: none;">
 
-          <!-- User info row: email (truncated) + Logout button -->
+          <!-- User row -->
           <div class="user-info">
-            <!-- JS sets this: "👤 user@example.com" -->
-            <span class="user-email" id="user-email" title="">👤</span>
-            <button
-              class="btn-logout"
-              id="btn-logout"
-              title="Logout clears all your uploaded documents"
-            >Logout</button>
+            <span class="user-email" id="user-email" title=""></span>
+            <button class="btn-logout" id="btn-logout" title="Sign out and clear session">
+              <i data-lucide="log-out"></i>
+              Sign out
+            </button>
           </div>
 
-          <!-- Section label -->
-          <p class="sidebar-title">Knowledge Base</p>
+          <!-- Session status -->
+          <div class="session-section">
+            <p class="sidebar-title">Knowledge Session</p>
+            <div class="session-status-row">
+              <span class="session-dot" id="session-dot"></span>
+              <span class="session-status-text" id="session-status-text">No context loaded</span>
+            </div>
+          </div>
 
-          <!-- Drop Zone: the dashed rectangle for file upload -->
-          <!-- JS: dragover, dragleave, drop, click events in upload.js -->
-          <div class="drop-zone" id="drop-zone" role="button" aria-label="File upload area. Click or drag a PDF or image file.">
+          <!-- Upload area -->
+          <div class="upload-section">
 
-            <!--
-              Hidden file input — the actual OS file picker.
-              We trigger it programmatically by calling fileInput.click()
-              when the drop zone is clicked.
-              "display: none" hides it from view.
-            -->
-            <input
-              type="file"
-              id="file-input"
-              accept=".pdf,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
-              style="display: none;"
-              aria-hidden="true"
-            />
+            <!-- Drop zone -->
+            <div class="drop-zone" id="drop-zone" role="button" aria-label="File upload — click or drag a PDF or image">
+              <input type="file" id="file-input" accept=".pdf,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
+                style="display: none;" aria-hidden="true" />
 
-            <!-- Default placeholder shown when no file is selected -->
-            <div class="drop-zone-placeholder">
-              <span class="drop-icon" aria-hidden="true">📂</span>
-              <span class="drop-text">Click or drag Document here</span>
-              <span class="drop-hint">PDF or Image files</span>
+              <!-- Default placeholder — overwritten by upload.js -->
+              <div class="drop-zone-placeholder">
+                <div class="drop-icon">
+                  <i data-lucide="upload-cloud"></i>
+                </div>
+                <span class="drop-text">Drop file or click to browse</span>
+                <span class="drop-hint">.pdf .png .jpg .jpeg .webp .tiff</span>
+              </div>
             </div>
 
+            <!-- Upload action -->
+            <button class="btn-upload" id="btn-upload" disabled>
+              Upload to session
+            </button>
+
+            <!-- Async feedback and progress (shown by upload.js) -->
+            <div class="upload-feedback" id="upload-feedback" style="display: none;" role="status"></div>
+
           </div>
-          <!-- end #drop-zone -->
+          <!-- end .upload-section -->
 
-          <!-- Upload button — disabled until a file is selected -->
-          <button class="btn-upload" id="btn-upload" disabled>
-            ⬆ Upload Document
-          </button>
-
-          <!-- Upload feedback: success ✅ or error ❌ message -->
-          <!-- Starts hidden. JS shows it after upload attempt. -->
-          <div class="upload-feedback" id="upload-feedback" style="display: none;" role="status"></div>
-
-          <!-- Privacy reminder -->
+          <!-- Session note — stays at bottom via CSS margin-top:auto -->
           <p class="sidebar-hint">
-            🔐 At logout, your documents are securely deleted to protect your privacy.
+            Context is cleared on sign out.
           </p>
 
         </div>
@@ -271,223 +156,112 @@
       <!-- end #sidebar-content -->
 
     </aside>
-    <!-- end sidebar -->
 
 
-    <!-- =====================================================
-         CHAT MAIN AREA
-         =====================================================
-         This is the main panel to the right of the sidebar.
-         It has three vertically-stacked sections:
-           1. .chat-header — App name + online status dot
-           2. .chat-messages — The scrollable message history
-           3. .chat-input-area — The textarea + send button
-         ===================================================== -->
+    <!-- ==============================================
+         CHAT MAIN
+         ============================================== -->
     <main class="chat-main" role="main">
 
-      <!-- ── Chat Header ────────────────────────────────── -->
+      <!-- Header -->
       <header class="chat-header">
-        <!-- Pulsing green dot — "active / online" indicator -->
         <div class="chat-header-dot" aria-hidden="true"></div>
-
-        <!-- Page heading — important for accessibility and SEO -->
-        <h2>Ephemeral AI Assistant — Powered by RAG</h2>
-
-        <!--
-          Public Mode badge — shown when the user is NOT logged in.
-          JS hides this after login by setting display: none.
-        -->
-        <span class="public-badge" id="public-badge" aria-live="polite">🔓 Public Mode</span>
+        <h2>Ephemeral AI — RAG</h2>
+        <span class="public-badge" id="public-badge" aria-live="polite">Public</span>
       </header>
 
 
-      <!-- ── Messages Area ──────────────────────────────── -->
-      <!--
-        This div is the scrollable chat window.
-        JS appends new .message-row elements here for each message.
-        overflow-y: auto (in CSS) enables scrolling when full.
-      -->
-      <div class="chat-messages" id="chat-messages" role="log" aria-label="Chat messages" aria-live="polite">
+      <!-- Messages -->
+      <div class="chat-messages" id="chat-messages" role="log" aria-label="Conversation" aria-live="polite">
 
-        <!--
-          Empty state — shown when there are no messages yet.
-          JS hides this once the first message is sent.
-        -->
+        <!-- Empty state -->
         <div class="chat-empty" id="chat-empty">
-          <div class="chat-empty-icon" aria-hidden="true">💬</div>
+          <div class="chat-empty-icon">
+            <i data-lucide="message-square"></i>
+          </div>
           <h3>Start a conversation</h3>
-          <!--
-            This text is updated by JS based on login state:
-            - Logged in: "Start chatting! Upload a document..."
-            - Guest: "Public Mode Active — Chat freely..."
-          -->
           <p id="chat-empty-text">
-            Public Mode Active — Chat freely, or log in to unlock RAG search with your documents
+            Public mode — chat freely, or sign in to enable document context
           </p>
         </div>
 
-        <!--
-          Message bubbles are dynamically added here by JavaScript.
-          Each message is a <div class="message-row user|ai|error"> containing:
-            - An optional .mode-badge (for AI messages)
-            - A .message-bubble with the text content
-          These elements are created in chat.js → renderUserMessage()
-          and renderAIMessageBubble().
-        -->
+        <!-- Message bubbles injected here by chat.js -->
 
       </div>
-      <!-- end #chat-messages -->
 
 
-      <!-- ── Chat Input Area ─────────────────────────────── -->
+      <!-- Input area -->
       <div class="chat-input-area">
 
-        <!-- Row wrapper: textarea + send button side by side -->
         <div class="chat-input-row">
+          <textarea class="chat-textarea" id="chat-input" rows="1" placeholder="Ask anything…"
+            aria-label="Message input"></textarea>
 
-          <!--
-            The textarea expands automatically as the user types.
-            This is handled by the autoGrow() function in utils.js,
-            which listens to the "input" event on this element.
-
-            rows="1" starts it at 1-line height.
-            The CSS max-height: 130px limits how tall it can grow.
-          -->
-          <textarea
-            class="chat-textarea"
-            id="chat-input"
-            rows="1"
-            placeholder="Ask anything… (Login to enable document search)"
-            aria-label="Chat message input"
-          ></textarea>
-
-          <!--
-            Send button — the ↑ arrow.
-            Disabled by default (no text typed yet).
-            JS enables it when there's text, disables during loading.
-          -->
-          <button
-            class="btn-send"
-            id="btn-send"
-            disabled
-            title="Send message"
-            aria-label="Send message"
-          >↑</button>
-
+          <button class="btn-send" id="btn-send" disabled title="Send message" aria-label="Send message">
+            <i data-lucide="arrow-up"></i>
+          </button>
         </div>
-        <!-- end .chat-input-row -->
 
-        <!--
-          Hint text below the input.
-          Updated by JS based on login state:
-          - "Logged in · Private documents · Auto-deleted on logout"
-          - "Public mode · No documents · All responses use general AI knowledge"
-        -->
         <p class="input-hint" id="input-hint">
-          Public mode · No documents · All responses use general AI knowledge
+          Public mode · responses use general AI knowledge
         </p>
 
       </div>
-      <!-- end .chat-input-area -->
 
     </main>
-    <!-- end .chat-main -->
 
 
-    <!-- =====================================================
+    <!-- ==============================================
          SESSION SUMMARY MODAL
-         =====================================================
-         A full-screen overlay that appears when the user
-         clicks "Logout". It shows a summary of their session
-         before all their data is deleted.
-
-         VISIBILITY CONTROL:
-           - Hidden by default (display: none via CSS)
-           - Shown by JS adding class "visible" to #modal-overlay
-           - The .visible class sets display: flex
-         ===================================================== -->
-    <div
-      class="modal-overlay"
-      id="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-
-      <!-- The white card in the center of the overlay -->
+         ============================================== -->
+    <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal-content">
 
-        <!-- Modal header: title + close (✕) button -->
         <header class="modal-header">
-          <h2 id="modal-title">End of Session Summary</h2>
-          <button
-            class="btn-close-modal"
-            id="btn-close-modal"
-            title="Cancel logout"
-            aria-label="Cancel logout and close modal"
-          >✕</button>
+          <h2 id="modal-title">Session Summary</h2>
+          <button class="btn-close-modal" id="btn-close-modal" title="Cancel" aria-label="Cancel and close"><i
+              data-lucide="x"></i></button>
         </header>
 
-        <!-- Modal body: shows loading spinner OR the summary text -->
-        <!-- JS swaps the inner HTML of this element -->
         <div class="modal-body">
           <div id="summary-container">
-            <!-- JS fills this with either:
-                 1. A .summary-loading spinner while fetching
-                 2. A .summary-markdown div with the rendered text -->
+            <!-- Filled by modal.js: loading spinner or rendered Markdown -->
           </div>
         </div>
 
-        <!-- Modal footer: action buttons -->
         <footer class="modal-footer">
-
-          <!-- Left side: utility tools -->
           <div class="modal-tools">
             <button class="btn-outline" id="btn-copy-summary" disabled>
-              📋 Copy Text
+              <i data-lucide="copy"></i> Copy
             </button>
             <button class="btn-outline" id="btn-download" disabled>
-              📥 Download .txt
+              <i data-lucide="download"></i> Download
             </button>
           </div>
-
-          <!-- Right side: cancel or confirm logout -->
           <div class="modal-actions">
-            <button class="btn-cancel" id="btn-cancel">
-              Cancel
-            </button>
+            <button class="btn-cancel" id="btn-cancel">Cancel</button>
             <button class="btn-danger" id="btn-finalize-logout" disabled>
-              Finalize Logout &amp; Delete Data
+              Sign out &amp; delete data
             </button>
           </div>
-
         </footer>
 
       </div>
-      <!-- end .modal-content -->
-
     </div>
-    <!-- end #modal-overlay -->
 
   </div>
   <!-- end .app -->
 
-  <!--
-    ── Main JavaScript Entry Point ────────────────────────────
-    We load chat.js as a module AFTER the closing </div> of .app,
-    so the DOM is fully parsed before the script runs.
-
-    type="module" enables ES6 import/export syntax.
-    It also automatically defers execution (runs after HTML is parsed).
-
-    chat.js imports from all other JS modules:
-      - auth.js    → Supabase authentication
-      - upload.js  → File drag-drop and upload
-      - modal.js   → Session summary modal
-      - api.js     → All backend fetch() calls
-      - utils.js   → autoGrow, renderMarkdown helpers
-    ───────────────────────────────────────────────────────── -->
+  <!-- App entry point (ES module — deferred automatically) -->
   <script type="module" src="js/chat.js"></script>
 
+  <!-- Initialise Lucide icons for all static data-lucide elements -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) { lucide.createIcons(); }
+    });
+  </script>
+
 </body>
+
 </html>

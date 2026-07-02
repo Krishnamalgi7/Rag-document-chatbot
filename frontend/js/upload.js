@@ -67,16 +67,16 @@ const STATUS_PROGRESS = {
   error      : 0,
 };
 
-// Maps backend status to the emoji + text shown to the user.
+// Maps backend status to the label shown in the progress bar.
 const STATUS_MESSAGES = {
-  queued     : "⏳ Queued…",
-  extracting : "📄 Extracting text…",
-  ocr        : "🔍 Running OCR…",
-  chunking   : "✂️ Chunking document…",
-  embedding  : "🧠 Generating embeddings…",
-  saving     : "💾 Saving to knowledge base…",
-  ready      : "✅ Ready!",
-  error      : "❌ Processing failed",
+  queued     : "Queued",
+  extracting : "Extracting text",
+  ocr        : "Running OCR",
+  chunking   : "Chunking document",
+  embedding  : "Generating embeddings",
+  saving     : "Saving to knowledge base",
+  ready      : "Ready",
+  error      : "Processing failed",
 };
 
 
@@ -163,7 +163,7 @@ export function handleFileSelection(file, elements) {
   });
 
   if (!isAllowed) {
-    showUploadFeedback(uploadFeedback, "error", "❌ Only PDF and Image files are accepted.");
+    showUploadFeedback(uploadFeedback, "error", "Only PDF and image files are accepted.");
     clearSelectedFile(elements);
     return;
   }
@@ -221,9 +221,9 @@ async function handleUpload(accessToken, elements) {
     // Phase 1 failed — show error immediately (no polling needed)
     let errorMsg = uploadError.message;
     if (errorMsg.includes("Failed to fetch")) {
-      errorMsg = "❌ Cannot reach the server. Is the backend running?";
+      errorMsg = "Cannot reach the server. Is the backend running?";
     } else {
-      errorMsg = "❌ " + errorMsg;
+      errorMsg = uploadError.message;
     }
     showUploadFeedback(uploadFeedback, "error", errorMsg);
     _resetUploadState(elements);
@@ -262,7 +262,7 @@ async function handleUpload(accessToken, elements) {
         showUploadFeedback(
           uploadFeedback,
           "error",
-          "❌ Lost contact with server. The document may still be processing — refresh to check."
+          "Lost contact with server. The document may still be processing — refresh to check."
         );
         _resetUploadState(elements);
       }
@@ -307,7 +307,7 @@ function _handleStatusUpdate(statusData, elements) {
     showUploadFeedback(
       uploadFeedback,
       "success",
-      "✅ Document ready!" + chunkInfo + timeInfo + " You can now ask questions about it."
+      "Document ready" + chunkInfo + timeInfo + " — you can now ask questions about it."
     );
 
     // Auto-hide success message after 8 seconds
@@ -328,7 +328,7 @@ function _handleStatusUpdate(statusData, elements) {
     showUploadFeedback(
       uploadFeedback,
       "error",
-      "❌ Processing failed: " + errorDetail
+      "Processing failed: " + errorDetail
     );
 
     // Auto-hide error after 10 seconds
@@ -360,7 +360,7 @@ function _resetUploadState(elements) {
   const { btnUpload } = elements;
   isUploading           = false;
   btnUpload.disabled    = true;      // stays disabled until a new file is selected
-  btnUpload.textContent = "⬆ Upload Document";
+  btnUpload.textContent = "Upload to session";
 }
 
 
@@ -375,9 +375,11 @@ function clearSelectedFile(elements) {
   dropZone.classList.remove("has-file");
   dropZone.innerHTML = `
     <div class="drop-zone-placeholder">
-      <span class="drop-icon">📂</span>
-      <span class="drop-text">Click or drag Document here</span>
-      <span class="drop-hint">PDF or Image files</span>
+      <div class="drop-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      </div>
+      <span class="drop-text">Drop file or click to browse</span>
+      <span class="drop-hint">.pdf .png .jpg .jpeg .webp .tiff</span>
     </div>
   `;
 }
@@ -394,12 +396,14 @@ function updateDropZoneWithFile(file, elements) {
 
   dropZone.innerHTML = `
     <div class="file-selected">
-      <div class="file-icon">📄</div>
+      <div class="file-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+      </div>
       <div class="file-info">
         <span class="file-name" title="${file.name}">${file.name}</span>
         <span class="file-size">${fileSizeKB} KB</span>
       </div>
-      <button class="btn-remove-file" id="btn-remove-file" title="Remove">✕</button>
+      <button class="btn-remove-file" id="btn-remove-file" title="Remove" aria-label="Remove file">&times;</button>
     </div>
   `;
 
@@ -450,7 +454,7 @@ function showProgressBar(elements, progressPercent, message) {
       <div class="upload-progress-bar-track">
         <div id="upload-progress-fill" class="upload-progress-bar-fill" style="width: 0%"></div>
       </div>
-      <p id="upload-progress-label" class="upload-progress-label">⏳ Starting…</p>
+      <p id="upload-progress-label" class="upload-progress-label">Starting…</p>
     `;
     // Insert the progress bar BEFORE the uploadFeedback element
     uploadFeedback.parentNode.insertBefore(wrapper, uploadFeedback);

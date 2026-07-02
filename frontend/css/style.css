@@ -1,153 +1,176 @@
-/* =========================================================
-   style.css — GLOBAL DESIGN SYSTEM
-   =========================================================
-   PURPOSE:
-     This file sets up the "design tokens" for the entire app.
-     Think of it as a central dictionary of colors, sizes, and
-     fonts. Every other CSS file references variables defined here.
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-   WHY SEPARATE FROM chat.css?
-     Keeping global resets/variables in one file makes it easy
-     to restyle the whole app by editing a single place.
-   ========================================================= */
-
-/* ── Google Fonts ──────────────────────────────────────────
-   We import two fonts:
-   - DM Sans   → used for body text (clean, readable)
-   - Outfit    → used for headings (bold, modern)
-   Without this, the browser falls back to boring system fonts.
-   ─────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap');
-
-/* ── CSS Custom Properties (Variables) ─────────────────────
-   WHY USE VARIABLES?
-   Instead of writing the same hex color (#8b5cf6) in 50 places,
-   we define it once here and reference it everywhere as
-   var(--accent). If we ever want to change the accent color,
-   we only change it in ONE place.
-   ─────────────────────────────────────────────────────────── */
 :root {
-  /* ── Background Colors ── */
-  --bg-app:           #0a0412;               /* Deepest background — the base canvas */
-  --bg-sidebar:       rgba(15, 8, 25, 0.85); /* Sidebar — slightly translucent dark */
-  --bg-chat:          #0a0412;               /* Chat area — same as app bg */
-  --bg-surface:       rgba(25, 15, 40, 0.6); /* Card/surface backgrounds */
-  --bg-surface2:      rgba(35, 20, 55, 0.5); /* Secondary surfaces (code blocks) */
-  --bg-input:         rgba(25, 15, 40, 0.6); /* Input fields */
-  --bg-hover:         rgba(45, 25, 70, 0.5); /* Hover state */
 
-  /* ── Message Bubble Colors ── */
-  --bg-msg-user:      linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); /* User bubble: purple gradient */
-  --bg-msg-ai:        rgba(25, 15, 40, 0.7);                               /* AI bubble: dark glass */
+  --surface-0: #0B1120;
+  --surface-1: #111827;
+  --surface-2: #1F2937;
+  --surface-3: #1E293B;
+  --surface-4: #243347;
 
-  /* ── Text Colors ── */
-  --text-primary:     #f5f3ff; /* Main text — near white with purple tint */
-  --text-secondary:   #c4b5fd; /* Muted text — light purple */
-  --text-muted:       #8b5cf6; /* Very muted — accent purple */
-  --text-on-user:     #ffffff; /* Text on user's purple bubble */
-  --text-code:        #e9d5ff; /* Code text inside code blocks */
+  --text-high: #F9FAFB;
+  --text-med: #9CA3AF;
+  --text-low: #6B7280;
 
-  /* ── Border Colors ── */
-  --border:           rgba(139, 92, 246, 0.15); /* Subtle border */
-  --border-light:     rgba(167, 139, 250, 0.25); /* Slightly visible border */
 
-  /* ── Accent / Brand Color ── */
-  --accent:           #8b5cf6; /* Purple — the main brand color */
-  --accent-hover:     #a78bfa; /* Lighter purple for hover states */
-  --accent-glow:      rgba(139, 92, 246, 0.5); /* Glow effect color */
+  --border-1: #374151;
+  --border-2: #2D3748;
+  --border-3: #4B5563;
 
-  /* ── Status Colors ── */
-  --success:          #34d399; /* Green — for success messages */
-  --success-bg:       rgba(52, 211, 153, 0.15);
-  --success-border:   rgba(52, 211, 153, 0.35);
 
-  --warning:          #fbbf24; /* Yellow — for warning/fallback badges */
-  --warning-bg:       rgba(251, 191, 36, 0.15);
-  --warning-border:   rgba(251, 191, 36, 0.35);
+  --accent: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-dim: rgba(37, 99, 235, .10);
+  --accent-ring: rgba(37, 99, 235, .28);
 
-  --error:            #f87171; /* Red — for error messages */
-  --error-bg:         rgba(248, 113, 113, 0.15);
-  --error-border:     rgba(248, 113, 113, 0.35);
+  --green: #10B981;
+  --green-dim: rgba(16, 185, 129, .10);
+  --green-border: rgba(16, 185, 129, .22);
 
-  /* ── Box Shadows ── */
-  --shadow-sm:        0 2px 10px rgba(0,0,0,0.5), 0 0 20px rgba(139,92,246,0.1);
-  --shadow-md:        0 8px 32px rgba(0,0,0,0.6), 0 0 40px rgba(139,92,246,0.15);
-  --shadow-lg:        0 20px 60px rgba(0,0,0,0.7), 0 0 60px rgba(139,92,246,0.2);
-  --shadow-accent:    0 0 40px rgba(139,92,246,0.5), 0 0 80px rgba(139,92,246,0.25);
+  --amber: #F59E0B;
+  --amber-dim: rgba(245, 158, 11, .08);
+  --amber-border: rgba(245, 158, 11, .20);
 
-  /* ── Gradient ── */
-  --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 50%, #5b21b6 100%);
+  --red: #EF4444;
+  --red-dim: rgba(239, 68, 68, .10);
+  --red-border: rgba(239, 68, 68, .22);
 
-  /* ── Border Radius ── */
-  --radius-sm:        10px;
-  --radius-md:        14px;
-  --radius-lg:        20px;
-  --radius-xl:        28px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
 
-  /* ── Sidebar widths ── */
-  --sidebar-width:     300px; /* Full sidebar width */
-  --sidebar-collapsed:  70px; /* Collapsed sidebar width */
+  --r-2: 2px;
+  --r-4: 4px;
+  --r-6: 6px;
+  --r-8: 8px;
 
-  /* ── Animation easing ── */
-  --transition:        0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .30);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, .40);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, .55);
+
+  --sidebar-w: 260px;
+  --sidebar-col: 52px;
+  --header-h: 48px;
+
+  --ease: 0.14s ease;
+  --ease-med: 0.22s ease;
+
+  --bg-app: var(--surface-1);
+  --bg-sidebar: var(--surface-2);
+  --bg-chat: var(--surface-1);
+  --bg-surface: var(--surface-2);
+  --bg-surface2: var(--surface-3);
+  --bg-input: var(--surface-0);
+  --bg-hover: var(--surface-4);
+  --bg-panel: var(--surface-3);
+  --bg-elevated: var(--surface-2);
+  --bg-overlay: var(--surface-4);
+  --bg-msg-user: var(--accent);
+  --bg-msg-ai: var(--surface-2);
+  --bg-input-hover: var(--surface-2);
+  --text-primary: var(--text-high);
+  --text-secondary: var(--text-med);
+  --text-tertiary: var(--text-low);
+  --text-muted: var(--text-low);
+  --text-on-user: #ffffff;
+  --text-code: #93C5FD;
+  --text-inverse: var(--surface-1);
+  --border: var(--border-1);
+  --border-subtle: var(--border-2);
+  --border-light: var(--border-1);
+  --border-strong: var(--border-3);
+  --msg-user-bg: var(--accent);
+  --msg-user-text: #ffffff;
+  --msg-ai-bg: var(--surface-2);
+  --msg-ai-border: var(--border-1);
+  --status-green: var(--green);
+  --status-green-bg: var(--green-dim);
+  --status-green-border: var(--green-border);
+  --status-yellow: var(--amber);
+  --status-yellow-bg: var(--amber-dim);
+  --status-yellow-border: var(--amber-border);
+  --status-red: var(--red);
+  --status-red-bg: var(--red-dim);
+  --status-red-border: var(--red-border);
+  --success: var(--green);
+  --success-bg: var(--green-dim);
+  --success-border: var(--green-border);
+  --warning: var(--amber);
+  --warning-bg: var(--amber-dim);
+  --warning-border: var(--amber-border);
+  --error: var(--red);
+  --error-bg: var(--red-dim);
+  --error-border: var(--red-border);
+  --accent-glow: var(--accent-ring);
+  --accent-soft: var(--accent-dim);
+  --accent-purple: var(--accent);
+  --accent-violet: var(--accent-hover);
+  --gradient-primary: var(--accent);
+  --shadow-accent: none;
+  --radius-sm: var(--r-4);
+  --radius-md: var(--r-6);
+  --radius-lg: var(--r-8);
+  --radius-xl: var(--r-8);
+  --sidebar-width: var(--sidebar-w);
+  --sidebar-collapsed: var(--sidebar-col);
+  --transition: var(--ease);
+  --transition-med: var(--ease-med);
 }
 
-/* ── Universal Reset ───────────────────────────────────────
-   WHY?
-   Different browsers apply different default margins/paddings
-   to elements. This reset removes all of them so we start
-   from a blank slate and style everything ourselves.
-   ─────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box; /* width includes padding and border */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-/* Make the page fill the full viewport height and width */
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
 }
 
-/* ── Body Base Styles ──────────────────────────────────────
-   Sets the default font, background, and text color
-   for the entire page.
-   ─────────────────────────────────────────────────────────── */
 body {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 14.5px;
-  line-height: 1.65;
-  color: var(--text-primary);
-  background: var(--bg-app);
-
-  /* Subtle purple glow in the background corners — decorative */
-  background-image:
-    radial-gradient(circle at 20% 50%, rgba(139,92,246,0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(109,40,217,0.08) 0%, transparent 50%),
-    radial-gradient(circle at 40% 20%, rgba(91,33,182,0.06) 0%, transparent 50%);
-  background-attachment: fixed; /* background stays fixed while content scrolls */
-
-  /* Smoother font rendering on macOS and Firefox */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-high);
+  background: var(--surface-1);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* ── Custom Scrollbar ──────────────────────────────────────
-   The default browser scrollbar looks ugly. This replaces it
-   with a thin, purple-accented scrollbar that matches the theme.
-   NOTE: These ::-webkit-scrollbar rules only work in Chrome/Edge/Safari.
-   Firefox uses a different (simpler) API.
-   ─────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: rgba(139,92,246,0.05); }
-::-webkit-scrollbar-thumb {
-  background: var(--accent);
-  border-radius: 99px;   /* pill shape */
-  border: 2px solid transparent;
-  background-clip: padding-box;
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 2px;
+}
+
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-hover);
-  background-clip: padding-box;
+  background: var(--border-1);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-4);
 }

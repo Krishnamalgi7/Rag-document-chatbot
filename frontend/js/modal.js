@@ -240,7 +240,7 @@ function copySummaryToClipboard(btnCopySummary) {
     .then(function () {
       // Temporarily change button text to confirm the copy worked
       const originalText = btnCopySummary.textContent;
-      btnCopySummary.textContent = "✅ Copied!";
+      btnCopySummary.textContent = "Copied";
       setTimeout(function () {
         btnCopySummary.textContent = originalText;
       }, 2000);
